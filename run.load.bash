@@ -24,6 +24,10 @@ if [ -z "$NUM_DOCUMENTS_PER_INSERT" ]; then
     echo "Need to set NUM_DOCUMENTS_PER_INSERT"
     exit 1
 fi
+if [ -z "$MAX_INSERTS_PER_SECOND" ]; then
+    echo "Need to set MAX_INSERTS_PER_SECOND"
+    exit 1
+fi
 if [ -z "$NUM_LOADER_THREADS" ]; then
     echo "Need to set NUM_LOADER_THREADS"
     exit 1
@@ -38,6 +42,10 @@ if [ -z "$MONGO_REPLICATION" ]; then
 fi
 if [ -z "$RUN_SECONDS" ]; then
     echo "Need to set RUN_SECONDS"
+    exit 1
+fi
+if [ -z "$WRITE_CONCERN" ]; then
+    echo "Need to set WRITE_CONCERN"
     exit 1
 fi
 
@@ -56,6 +64,18 @@ fi
 if [ -z "$NUM_COLLECTIONS" ]; then
     export NUM_COLLECTIONS=1
 fi
+if [ -z "$QUERIES_PER_INTERVAL" ]; then
+    export QUERIES_PER_INTERVAL=0
+fi
+if [ -z "$QUERY_INTERVAL_SECONDS" ]; then
+    export QUERY_INTERVAL_SECONDS=60
+fi
+if [ -z "$QUERY_LIMIT" ]; then
+    export QUERY_LIMIT=1000
+fi
+if [ -z "$QUERY_NUM_DOCS_BEGIN" ]; then
+    export QUERY_NUM_DOCS_BEGIN=10000000
+fi
 
 
 IOSTAT_INTERVAL=10
@@ -63,7 +83,7 @@ IOSTAT_ROUNDS=$[RUN_SECONDS/IOSTAT_INTERVAL+1]
 
 ant clean default
 
-export MINI_LOG_NAME=${MACHINE_NAME}-mongoiibench-${NUM_COLLECTIONS}-${MAX_ROWS}-${NUM_DOCUMENTS_PER_INSERT}-${NUM_LOADER_THREADS}-${MONGO_TYPE}
+export MINI_LOG_NAME=${MACHINE_NAME}-mongoiibench-${NUM_COLLECTIONS}-${MAX_ROWS}-${NUM_DOCUMENTS_PER_INSERT}-${MAX_INSERTS_PER_SECOND}-${NUM_LOADER_THREADS}-${MONGO_TYPE}-${QUERIES_PER_INTERVAL}-${QUERY_INTERVAL_SECONDS}
     
 if [ ${MONGO_TYPE} == "tokumx" ]; then
     if [ ${COMMIT_SYNC} == "1" ]; then
@@ -91,7 +111,7 @@ rm -f $BENCHMARK_TSV
 
 echo "`date` | starting the ${MONGO_TYPE} server at ${MONGO_DIR}" | tee -a $LOG_NAME
 if [ ${MONGO_TYPE} == "tokumx" ]; then
-    mongo-start-tokumon-fork
+    mongo-start-tokumx-fork
 else
     mongo-start-pure-numa-fork
 fi

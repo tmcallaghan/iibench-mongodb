@@ -37,11 +37,16 @@ fi
 if [ -z "$MAX_ROWS" ]; then
     export MAX_ROWS=1000000000
 fi
-if [ -z "$ROWS_INSERTS_PER_FEEDBACK" ]; then
-    export ROWS_PER_REPORT=100000
-fi
 if [ -z "$RUN_MINUTES" ]; then
     export RUN_MINUTES=200000
+fi
+if [ -z "$MAX_INSERTS_PER_SECOND" ]; then
+    export MAX_INSERTS_PER_SECOND=9999999
+fi
+
+if [ -z "$WRITE_CONCERN" ]; then
+    # FSYNC_SAFE, NONE, NORMAL, REPLICAS_SAFE, SAFE
+    export WRITE_CONCERN=FSYNC_SAFE
 fi
 
 export RUN_SECONDS=$[RUN_MINUTES*60]
@@ -53,7 +58,7 @@ if [ -z "$NUM_LOADER_THREADS" ]; then
     export NUM_LOADER_THREADS=1
 fi
 if [ -z "$DB_NAME" ]; then
-    export DB_NAME=sbtest
+    export DB_NAME=iibench
 fi
 if [ -z "$BENCHMARK_NUMBER" ]; then
     export BENCHMARK_NUMBER=101
@@ -61,6 +66,20 @@ fi
 if [ -z "$MONGO_REPLICATION" ]; then
     export MONGO_REPLICATION=N
 fi
+
+if [ -z "$QUERIES_PER_INTERVAL" ]; then
+    export QUERIES_PER_INTERVAL=0
+fi
+if [ -z "$QUERY_INTERVAL_SECONDS" ]; then
+    export QUERY_INTERVAL_SECONDS=60
+fi
+if [ -z "$QUERY_LIMIT" ]; then
+    export QUERY_LIMIT=1000
+fi
+if [ -z "$QUERY_NUM_DOCS_BEGIN" ]; then
+    export QUERY_NUM_DOCS_BEGIN=10000000
+fi
+
 
 # unpack mongo files
 echo "Creating mongo from ${TARBALL} in ${MONGO_DIR}"
