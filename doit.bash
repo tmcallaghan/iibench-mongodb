@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# this is the main "pre-execution" script for the benchmark
+#   can be called from a higher level script
+
 if [ -z "$BENCHMARK_SUFFIX" ]; then
     #export BENCHMARK_SUFFIX=".anything-you-want"
     export BENCHMARK_SUFFIX=""

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# this is the "execution" script for the benchmark
+#   it must be called from a higher-level script
+
 if [ -z "$MONGO_DIR" ]; then
     echo "Need to set MONGO_DIR"
     exit 1
