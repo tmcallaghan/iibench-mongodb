@@ -8,12 +8,12 @@ if [ -z "$BENCHMARK_SUFFIX" ]; then
     export BENCHMARK_SUFFIX=""
 fi
 if [ -z "$TARBALL" ]; then
-    #export TARBALL=tokumx-1.0.0-rc.0-linux-x86_64
-    export TARBALL=mongodb-linux-x86_64-2.2.3
+    export TARBALL=tokumx-1.0.4-linux-x86_64
+    #export TARBALL=mongodb-linux-x86_64-2.2.5
 fi
 if [ -z "$MONGO_TYPE" ]; then
-    #export MONGO_TYPE=tokumx
-    export MONGO_TYPE=mongo
+    export MONGO_TYPE=tokumx
+    #export MONGO_TYPE=mongo
 fi
 if [ -z "$MONGO_DIR" ]; then
     echo "Need to set MONGO_DIR"
@@ -43,13 +43,16 @@ fi
 if [ -z "$RUN_MINUTES" ]; then
     export RUN_MINUTES=200000
 fi
+if [ -z "$NUM_DOCUMENTS_PER_INSERT" ]; then
+    export NUM_DOCUMENTS_PER_INSERT=1000
+fi
 if [ -z "$MAX_INSERTS_PER_SECOND" ]; then
     export MAX_INSERTS_PER_SECOND=9999999
 fi
 
 if [ -z "$WRITE_CONCERN" ]; then
     # FSYNC_SAFE, NONE, NORMAL, REPLICAS_SAFE, SAFE
-    export WRITE_CONCERN=FSYNC_SAFE
+    export WRITE_CONCERN=SAFE
 fi
 
 export RUN_SECONDS=$[RUN_MINUTES*60]

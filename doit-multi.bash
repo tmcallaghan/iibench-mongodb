@@ -33,20 +33,9 @@ fi
 export BENCHMARK_SUFFIX=".${LOCK_MEM_SIZE_16}-lock"
 
 # TOKUMX
-export TARBALL=tokumx-1.0.2-linux-x86_64
+export TARBALL=tokumx-1.0.4-linux-x86_64
 export MONGO_TYPE=tokumx
-export WRITE_CONCERN=FSYNC_SAFE
-export BENCH_ID=tokumx-1.0.2-${MONGO_COMPRESSION}-${WRITE_CONCERN}
-./doit.bash
-mongo-clean
-
-
-# TOKUMX - SAFE
-export TARBALL=tokumx-1.0.2-linux-x86_64
-export MONGO_TYPE=tokumx
-export MONGO_REPLICATION=N
-export WRITE_CONCERN=SAFE
-export BENCH_ID=tokumx-1.0.2-${MONGO_COMPRESSION}-${WRITE_CONCERN}
+export BENCH_ID=tokumx-1.0.4-${MONGO_COMPRESSION}-${WRITE_CONCERN}
 ./doit.bash
 mongo-clean
 
@@ -58,17 +47,6 @@ sudo ~/bin/lockmem $LOCK_MEM_SIZE_16 &
 # MONGODB
 export TARBALL=mongodb-linux-x86_64-2.2.5
 export MONGO_TYPE=mongo
-export MONGO_REPLICATION=N
-export WRITE_CONCERN=FSYNC_SAFE
-export BENCH_ID=mongo-2.2.5-${WRITE_CONCERN}
-./doit.bash
-mongo-clean
-
-# MONGODB - SAFE
-export TARBALL=mongodb-linux-x86_64-2.2.5
-export MONGO_TYPE=mongo
-export MONGO_REPLICATION=N
-export WRITE_CONCERN=SAFE
 export BENCH_ID=mongo-2.2.5-${WRITE_CONCERN}
 ./doit.bash
 mongo-clean

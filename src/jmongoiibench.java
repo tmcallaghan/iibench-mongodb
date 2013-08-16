@@ -62,9 +62,9 @@ public class jmongoiibench {
     }
 
     public static void main (String[] args) throws Exception {
-        if (args.length != 17) {
+        if (args.length != 16) {
             logMe("*** ERROR : CONFIGURATION ISSUE ***");
-            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [technology = mongo|tokumx] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern]");
+            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern]");
             System.exit(1);
         }
         
@@ -75,16 +75,15 @@ public class jmongoiibench {
         insertsPerFeedback = Long.valueOf(args[4]);
         secondsPerFeedback = Long.valueOf(args[5]);
         logFileName = args[6];
-        indexTechnology = args[7];
-        compressionType = args[8];
-        basementSize = Integer.valueOf(args[9]);
-        numSeconds = Long.valueOf(args[10]);
-        queriesPerInterval = Integer.valueOf(args[11]);
-        queryIntervalSeconds = Integer.valueOf(args[12]);
-        queryLimit = Integer.valueOf(args[13]);
-        queryBeginNumDocs = Integer.valueOf(args[14]);
-        maxInsertsPerSecond = Integer.valueOf(args[15]);
-        myWriteConcern = args[16];
+        compressionType = args[7];
+        basementSize = Integer.valueOf(args[8]);
+        numSeconds = Long.valueOf(args[9]);
+        queriesPerInterval = Integer.valueOf(args[10]);
+        queryIntervalSeconds = Integer.valueOf(args[11]);
+        queryLimit = Integer.valueOf(args[12]);
+        queryBeginNumDocs = Integer.valueOf(args[13]);
+        maxInsertsPerSecond = Integer.valueOf(args[14]);
+        myWriteConcern = args[15];
         
         WriteConcern myWC = new WriteConcern();
         if (myWriteConcern.toLowerCase().equals("fsync_safe")) {
@@ -129,13 +128,6 @@ public class jmongoiibench {
         logMe("  Feedback every %,d seconds(s)",secondsPerFeedback);
         logMe("  Feedback every %,d inserts(s)",insertsPerFeedback);
         logMe("  logging to file %s",logFileName);
-        logMe("  index technology = %s",indexTechnology);
-        
-        if (indexTechnology.toLowerCase().equals("tokumx")) {
-            logMe("  + compression type = %s",compressionType);
-            logMe("  + basement node size (bytes) = %d",basementSize);
-        }
-            
         logMe("  Run for %,d second(s)",numSeconds);
         if (queriesPerMinute > 0.0)
         {
@@ -149,20 +141,6 @@ public class jmongoiibench {
         }
         logMe("  write concern = %s",myWriteConcern);
         
-        logMe("--------------------------------------------------");
-
-        try {
-            writer = new BufferedWriter(new FileWriter(new File(logFileName)));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        if ((!indexTechnology.toLowerCase().equals("tokumx")) && (!indexTechnology.toLowerCase().equals("mongo"))) {
-            // unknown index technology, abort
-            logMe(" *** Unknown Indexing Technology %s, shutting down",indexTechnology);
-            System.exit(1);
-        }
-
         MongoClientOptions clientOptions = new MongoClientOptions.Builder().connectionsPerHost(2048).writeConcern(myWC).build();
         MongoClient m = new MongoClient("localhost", clientOptions);
         
@@ -171,6 +149,41 @@ public class jmongoiibench {
         
         DB db = m.getDB(dbName);
         
+        // determine server type : mongo or tokumx
+        DBObject checkServerCmd = new BasicDBObject();
+        CommandResult commandResult = db.command("buildInfo");
+        
+        // check if tokumxVersion exists, otherwise assume mongo
+        if (commandResult.toString().contains("tokumxVersion")) {
+            indexTechnology = "tokumx";
+        }
+        else
+        {
+            indexTechnology = "mongo";
+        }
+        
+        if ((!indexTechnology.toLowerCase().equals("tokumx")) && (!indexTechnology.toLowerCase().equals("mongo"))) {
+            // unknown index technology, abort
+            logMe(" *** Unknown Indexing Technology %s, shutting down",indexTechnology);
+            System.exit(1);
+        }
+        
+        logMe("  index technology = %s",indexTechnology);
+        
+        if (indexTechnology.toLowerCase().equals("tokumx")) {
+            logMe("  + compression type = %s",compressionType);
+            logMe("  + basement node size (bytes) = %d",basementSize);
+        }
+        
+        logMe("--------------------------------------------------");
+
+        try {
+            writer = new BufferedWriter(new FileWriter(new File(logFileName)));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
         jmongoiibench t = new jmongoiibench();
 
         Thread reporterThread = new Thread(t.new MyReporter());

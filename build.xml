@@ -52,7 +52,6 @@
         <fail unless="env.NUM_INSERTS_PER_FEEDBACK" message="NUM_INSERTS_PER_FEEDBACK not set."/>
         <fail unless="env.NUM_SECONDS_PER_FEEDBACK" message="NUM_SECONDS_PER_FEEDBACK not set."/>
         <fail unless="env.BENCHMARK_TSV" message="BENCHMARK_TSV not set."/>
-        <fail unless="env.MONGO_TYPE" message="MONGO_TYPE not set."/>
         <fail unless="env.MONGO_COMPRESSION" message="MONGO_COMPRESSION not set."/>
         <fail unless="env.MONGO_BASEMENT" message="MONGO_BASEMENT not set."/>
         <fail unless="env.RUN_SECONDS" message="RUN_SECONDS not set."/>
@@ -71,7 +70,6 @@
             <arg value="${env.NUM_INSERTS_PER_FEEDBACK}"/>       <!-- number of inserts between feedback/progress messages  -->
             <arg value="${env.NUM_SECONDS_PER_FEEDBACK}"/>       <!-- number of seconds between feedback/progress messages  -->
             <arg value="${env.BENCHMARK_TSV}"/>                  <!-- name of log file -->
-            <arg value="${env.MONGO_TYPE}"/>                     <!-- technology : mongo/tokumx -->
             <arg value="${env.MONGO_COMPRESSION}"/>              <!-- compression type (if tokumx), valid values are lzma, quicklz, zlib, none -->
             <arg value="${env.MONGO_BASEMENT}"/>                 <!-- basement node size (if tokumx), 131072 = 128K -->
             <arg value="${env.RUN_SECONDS}"/>                    <!-- number of seconds to run for -->

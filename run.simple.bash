@@ -2,10 +2,6 @@
 
 # simple script to run against running MongoDB/TokuMX server localhost:(default port)
 
-# Need to know which server we are running
-#   valid values : tokumx or mongo
-export MONGO_TYPE=tokumx
-
 # if running TokuMX, need to select compression for collection and secondary indexes (zlib is default)
 #   valid values : lzma, quicklz, zlib, none
 export MONGO_COMPRESSION=zlib
@@ -72,7 +68,7 @@ export QUERY_NUM_DOCS_BEGIN=1000000
 
 ant clean default
 
-export LOG_NAME=mongoiibench-${MAX_ROWS}-${NUM_DOCUMENTS_PER_INSERT}-${MAX_INSERTS_PER_SECOND}-${NUM_LOADER_THREADS}-${MONGO_TYPE}-${QUERIES_PER_INTERVAL}-${QUERY_INTERVAL_SECONDS}
+export LOG_NAME=mongoiibench-${MAX_ROWS}-${NUM_DOCUMENTS_PER_INSERT}-${MAX_INSERTS_PER_SECOND}-${NUM_LOADER_THREADS}-${QUERIES_PER_INTERVAL}-${QUERY_INTERVAL_SECONDS}
 export BENCHMARK_TSV=${LOG_NAME}.tsv
     
 rm -f $LOG_NAME
