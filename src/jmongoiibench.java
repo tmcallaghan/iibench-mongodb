@@ -35,6 +35,11 @@ public class jmongoiibench {
     
     public static Writer writer = null;
     public static boolean outputHeader = true;
+    
+    public static int numCashRegisters = 1000;
+    public static int numProducts = 10000;
+    public static int numCustomers = 100000;
+    public static double maxPrice = 500.0;
 
     public static String dbName;
     public static int writerThreads;
@@ -55,6 +60,14 @@ public class jmongoiibench {
     public static Integer queryBeginNumDocs;
     public static Integer maxInsertsPerSecond;
     public static String myWriteConcern;
+    public static String serverName;
+    public static int serverPort;
+    public static int numCharFields;
+    public static int lengthCharFields;
+    public static int numSecondaryIndexes;
+
+    public static int randomStringLength = 4*1024*1024;
+    public static String randomStringHolder;
     
     public static int allDone = 0;
     
@@ -62,9 +75,9 @@ public class jmongoiibench {
     }
 
     public static void main (String[] args) throws Exception {
-        if (args.length != 16) {
+        if (args.length != 21) {
             logMe("*** ERROR : CONFIGURATION ISSUE ***");
-            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern]");
+            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes]");
             System.exit(1);
         }
         
@@ -84,6 +97,11 @@ public class jmongoiibench {
         queryBeginNumDocs = Integer.valueOf(args[13]);
         maxInsertsPerSecond = Integer.valueOf(args[14]);
         myWriteConcern = args[15];
+        serverName = args[16];
+        serverPort = Integer.valueOf(args[17]);
+        numCharFields = Integer.valueOf(args[18]);
+        lengthCharFields = Integer.valueOf(args[19]);
+        numSecondaryIndexes = Integer.valueOf(args[20]);
         
         WriteConcern myWC = new WriteConcern();
         if (myWriteConcern.toLowerCase().equals("fsync_safe")) {
@@ -106,6 +124,12 @@ public class jmongoiibench {
             logMe("  write concern %s is not supported",myWriteConcern);
             System.exit(1);
         }
+
+        if ((numSecondaryIndexes < 0) || (numSecondaryIndexes > 3)) {
+            logMe("*** ERROR : INVALID NUMBER OF SECONDARY INDEXES, MUST BE >=0 and <= 3 ***");
+            logMe("  %d secondary indexes is not supported",numSecondaryIndexes);
+            System.exit(1);
+        }
         
         if ((queriesPerInterval <= 0) || (queryIntervalSeconds <= 0))
         {
@@ -123,6 +147,9 @@ public class jmongoiibench {
         logMe("  database name = %s",dbName);
         logMe("  %d writer thread(s)",writerThreads);
         logMe("  %,d documents per collection",numMaxInserts);
+        logMe("  %d character fields",numCharFields);
+        logMe("  %d bytes per character field",lengthCharFields);
+        logMe("  %d secondary indexes",numSecondaryIndexes);
         logMe("  Documents Per Insert = %d",documentsPerInsert);
         logMe("  Maximum of %,d insert(s) per second",maxInsertsPerSecond);
         logMe("  Feedback every %,d seconds(s)",secondsPerFeedback);
@@ -140,9 +167,11 @@ public class jmongoiibench {
             logMe("  NO queries, insert only benchmark");
         }
         logMe("  write concern = %s",myWriteConcern);
+        logMe("  Server:Port = %s:%d",serverName,serverPort);
         
-        MongoClientOptions clientOptions = new MongoClientOptions.Builder().connectionsPerHost(2048).writeConcern(myWC).build();
-        MongoClient m = new MongoClient("localhost", clientOptions);
+        MongoClientOptions clientOptions = new MongoClientOptions.Builder().connectionsPerHost(2048).socketTimeout(60000).writeConcern(myWC).build();
+        ServerAddress srvrAdd = new ServerAddress(serverName,serverPort);
+        MongoClient m = new MongoClient(srvrAdd, clientOptions);
         
         logMe("mongoOptions | " + m.getMongoOptions().toString());
         logMe("mongoWriteConcern | " + m.getWriteConcern().toString());
@@ -182,6 +211,58 @@ public class jmongoiibench {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        // create the collection
+        String collectionName = "purchases_index";
+
+        if (indexTechnology.toLowerCase().equals("tokumx")) {
+            DBObject cmd = new BasicDBObject();
+            cmd.put("create", collectionName);
+            cmd.put("compression", compressionType);
+            cmd.put("readPageSize", basementSize);
+            CommandResult result = db.command(cmd);
+            //logMe(result.toString());
+        } else if (indexTechnology.toLowerCase().equals("mongo")) {
+            // nothing special to do for a regular mongo collection
+        } else {
+            // unknown index technology, abort
+            logMe(" *** Unknown Indexing Technology %s, shutting down",indexTechnology);
+            System.exit(1);
+        }
+
+        DBCollection coll = db.getCollection(collectionName);
+
+        BasicDBObject idxOptions = new BasicDBObject();
+        idxOptions.put("background",false);
+
+        if (indexTechnology.toLowerCase().equals("tokumx")) {
+            idxOptions.put("compression",compressionType);
+            idxOptions.put("readPageSize",basementSize);
+        }
+
+        if (numSecondaryIndexes >= 1) {
+            logMe(" *** creating secondary index on price + customerid");
+            coll.ensureIndex(new BasicDBObject("price", 1).append("customerid", 1), idxOptions);
+        }
+        if (numSecondaryIndexes >= 2) {
+            logMe(" *** creating secondary index on cashregisterid + price + customerid");
+            coll.ensureIndex(new BasicDBObject("cashregisterid", 1).append("price", 1).append("customerid", 1), idxOptions);
+        }
+        if (numSecondaryIndexes >= 3) {
+            logMe(" *** creating secondary index on price + dateandtime + customerid");
+            coll.ensureIndex(new BasicDBObject("price", 1).append("dateandtime", 1).append("customerid", 1), idxOptions);
+        }
+        // END: create the collection
+
+
+        // create random string holder
+        logMe("  creating %,d bytes of random character data...",randomStringLength);
+        java.util.Random rand = new java.util.Random();
+        char[] tempString = new char[randomStringLength];
+        for (int i = 0 ; i < randomStringLength ; i++) { 
+            tempString[i] = (char) (rand.nextInt(26) + 'a');
+        }
+        randomStringHolder = new String(tempString);
 
 
         jmongoiibench t = new jmongoiibench();
@@ -257,38 +338,8 @@ public class jmongoiibench {
         }
         public void run() {
             String collectionName = "purchases_index";
-            
-            if (indexTechnology.toLowerCase().equals("tokumx")) {
-                DBObject cmd = new BasicDBObject();
-                cmd.put("create", collectionName);
-                cmd.put("compression", compressionType);
-                cmd.put("readPageSize", basementSize);
-                //cmd.put("basementSize", basementSize);
-                CommandResult result = db.command(cmd);
-                //logMe(result.toString());
-            } else if (indexTechnology.toLowerCase().equals("mongo")) {
-                // nothing special to do for a regular mongo collection
-                
-            } else {
-                // unknown index technology, abort
-                logMe(" *** Unknown Indexing Technology %s, shutting down",indexTechnology);
-                System.exit(1);
-            }
-
             DBCollection coll = db.getCollection(collectionName);
         
-            BasicDBObject idxOptions = new BasicDBObject();
-            idxOptions.put("background","true");
-        
-            if (indexTechnology.toLowerCase().equals("tokumx")) {
-                idxOptions.put("compression",compressionType);
-                idxOptions.put("readPageSize",basementSize);
-            }
-
-            coll.ensureIndex(new BasicDBObject("price", 1).append("customerid", 1), idxOptions);
-            coll.ensureIndex(new BasicDBObject("cashregisterid", 1).append("price", 1).append("customerid", 1), idxOptions);
-            coll.ensureIndex(new BasicDBObject("price", 1).append("dateandtime", 1).append("customerid", 1), idxOptions);
-            
             long numInserts = 0;
             long numLastInserts = 0;
             int id = 0;
@@ -317,15 +368,19 @@ public class jmongoiibench {
 
                     for (int i = 0; i < documentsPerInsert; i++) {
                         //id++;
-                        double thisCustomerId = rand.nextInt(100000);
-                        double thisPrice= (rand.nextDouble() * 500.0) + (double) thisCustomerId;
+                        int thisCustomerId = rand.nextInt(numCustomers);
+                        double thisPrice= ((rand.nextDouble() * maxPrice) + (double) thisCustomerId) / 100.0;
                         BasicDBObject doc = new BasicDBObject();
                         //doc.put("_id",id);
-                        doc.put("dateandtime", System.nanoTime());
-                        doc.put("cashregisterid", rand.nextInt(1000));
+                        doc.put("dateandtime", System.currentTimeMillis());
+                        doc.put("cashregisterid", rand.nextInt(numCashRegisters));
                         doc.put("customerid", thisCustomerId);
-                        doc.put("productid", rand.nextInt(10000));
+                        doc.put("productid", rand.nextInt(numProducts));
                         doc.put("price", thisPrice);
+                        for (int charField = 1; charField <= numCharFields; charField++) {
+                            int startPosition = rand.nextInt(randomStringLength-lengthCharFields);
+                            doc.put("cf"+Integer.toString(charField), randomStringHolder.substring(startPosition,startPosition+lengthCharFields));
+                        }
                         aDocs[i]=doc;
                     }
 
@@ -377,7 +432,8 @@ public class jmongoiibench {
         
             long numQueriesExecuted = 0;
             long numQueriesTimeMs = 0;
-            int id = 0;
+            
+            int whichQuery = 0;
             
             try {
                 logMe("Query thread %d : ready to query collection %s",threadNumber, collectionName);
@@ -394,7 +450,7 @@ public class jmongoiibench {
                     // wait until my next runtime
                     if (thisNow > nextQueryMillis) {
                         nextQueryMillis = thisNow + msBetweenQueries;
-                        
+
                         // check if number of inserts reached
                         if (globalInserts.get() >= queryBeginNumDocs) {
                             if (outputStarted)
@@ -405,24 +461,170 @@ public class jmongoiibench {
                                 globalQueriesStarted.set(thisNow);
                             }
                             
-                            String querySearchField = "";
-                            int querySearchValue = 0;
-                    
-                            querySearchField = "cashregisterid";
-                            querySearchValue = rand.nextInt(1000);
+                            whichQuery++;
+                            if (whichQuery > 3) {
+                                whichQuery = 1;
+                            }
                             
-// cashregisterid = ?  and price >= ?
-
+                            int thisCustomerId = rand.nextInt(numCustomers);
+                            double thisPrice = ((rand.nextDouble() * maxPrice) + (double) thisCustomerId) / 100.0;
+                            int thisCashRegisterId = rand.nextInt(numCashRegisters);
+                            int thisProductId = rand.nextInt(numProducts);
+                            long thisRandomTime = t0 + (long) ((double) (thisNow - t0) * rand.nextDouble());
+                            
                             BasicDBObject query = new BasicDBObject();
                             BasicDBObject keys = new BasicDBObject();
-                            // query.put(querySearchField, new BasicDBObject("$gte", querySearchValue));
-                            query.put(querySearchField, querySearchValue);
+
+                            // query <NOT RUNNING>
+                            // *** WE ARE NOT CURRENTLY RUNNING THIS QUERY, THE _id VALUES ARE AUTO-GENERATED ***
+                            /*
+                            def generate_pk_query(row_count, start_time):
+                              if FLAGS.with_max_table_rows and row_count > FLAGS.max_table_rows :
+                                pk_txid = row_count - FLAGS.max_table_rows + random.randrange(FLAGS.max_table_rows)
+                              else:
+                                pk_txid = random.randrange(max(row_count,1))
                             
-                            // here is how you include particular fields
-                            //keys.put("URI",1);
-                            //keys.put("name",1);
-                            // here is how you exclude particular fields
-                            //keys.put("_id",0);
+                              sql = 'SELECT transactionid FROM %s WHERE '\
+                                    '(transactionid >= %d) LIMIT %d' % (
+                                  FLAGS.table_name, pk_txid, FLAGS.rows_per_query)
+                              return sql
+                            */
+                            
+                            if (whichQuery == 1) {
+                                // query 1
+                                /*
+                                def generate_pdc_query(row_count, start_time):
+                                  customerid = random.randrange(0, FLAGS.customers)
+                                  price = ((random.random() * FLAGS.max_price) + customerid) / 100.0
+                                
+                                  random_time = ((time.time() - start_time) * random.random()) + start_time
+                                  when = random_time + (random.randrange(max(row_count,1)) / 100000.0)
+                                  datetime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(when))
+                                
+                                  sql = 'SELECT price,dateandtime,customerid FROM %s FORCE INDEX (pdc) WHERE '\
+                                        '(price=%.2f and dateandtime="%s" and customerid>=%d) OR '\
+                                        '(price=%.2f and dateandtime>"%s") OR '\
+                                        '(price>%.2f) LIMIT %d' % (FLAGS.table_name, price,
+                                                                   datetime, customerid,
+                                                                   price, datetime, price,
+                                                                   FLAGS.rows_per_query)
+                                  return sql
+                                  
+    db.purchases_index.find({$or: [ {price: <price>, dateandtime: <dateandtime>, customerid: {$gte: <customerid>}},
+                                    {price: <price>, dateandtime: {$gt: <dateandtime>}},
+                                    {price: {$gt: <price>}} ]}, 
+                            {price:1, dateandtime:1, customerid:1, _id:0}).limit(1000);
+                                */
+                                
+                                BasicDBObject query1a = new BasicDBObject();
+                                query1a.put("price", thisPrice);
+                                query1a.put("dateandtime", thisRandomTime);
+                                query1a.put("customerid", new BasicDBObject("$gte", thisCustomerId));
+                                
+                                BasicDBObject query1b = new BasicDBObject();
+                                query1b.put("price", thisPrice);
+                                query1b.put("dateandtime", new BasicDBObject("$gt", thisRandomTime));
+                                
+                                BasicDBObject query1c = new BasicDBObject();
+                                query1c.put("price", new BasicDBObject("$gt", thisPrice));
+                                
+                                ArrayList<BasicDBObject> list1 = new ArrayList<BasicDBObject>();
+                                list1.add(query1a);
+                                list1.add(query1b);
+                                list1.add(query1c);
+                                
+                                query.put("$or", list1);
+                                
+                                keys.put("price",1);
+                                keys.put("dateandtime",1);
+                                keys.put("customerid",1);
+                                keys.put("_id",0);
+                                
+                            } else if (whichQuery == 2) {
+                                // query 2
+                                /*
+                                def generate_market_query(row_count, start_time):
+                                  customerid = random.randrange(0, FLAGS.customers)
+                                  price = ((random.random() * FLAGS.max_price) + customerid) / 100.0
+                                
+                                  sql = 'SELECT price,customerid FROM %s FORCE INDEX (marketsegment) WHERE '\
+                                        '(price=%.2f and customerid>=%d) OR '\
+                                        '(price>%.2f) LIMIT %d' % (
+                                      FLAGS.table_name, price, customerid, price, FLAGS.rows_per_query)
+                                  return sql
+    
+    db.purchases_index.find({$or: [ {price: <price>, customerid: {$gte: <customerid>} },
+                                    {price: {$gt: <price>}} ]}, 
+                            {price:1, customerid:1, _id:0}).limit(1000);
+                                */
+                                
+                                BasicDBObject query2a = new BasicDBObject();
+                                query2a.put("price", thisPrice);
+                                query2a.put("customerid", new BasicDBObject("$gte", thisCustomerId));
+                                
+                                BasicDBObject query2b = new BasicDBObject();
+                                query2b.put("price", new BasicDBObject("$gt", thisPrice));
+                                
+                                ArrayList<BasicDBObject> list2 = new ArrayList<BasicDBObject>();
+                                list2.add(query2a);
+                                list2.add(query2b);
+                                
+                                query.put("$or", list2);
+                                
+                                keys.put("price",1);
+                                keys.put("customerid",1);
+                                keys.put("_id",0);
+                                
+                            } else if (whichQuery == 3) {
+                                // query 3
+                                /*
+                                def generate_register_query(row_count, start_time):
+                                  customerid = random.randrange(0, FLAGS.customers)
+                                  price = ((random.random() * FLAGS.max_price) + customerid) / 100.0
+                                  cashregisterid = random.randrange(0, FLAGS.cashregisters)
+                                
+                                  sql = 'SELECT cashregisterid,price,customerid FROM %s '\
+                                        'FORCE INDEX (registersegment) WHERE '\
+                                        '(cashregisterid=%d and price=%.2f and customerid>=%d) OR '\
+                                        '(cashregisterid=%d and price>%.2f) OR '\
+                                        '(cashregisterid>%d) LIMIT %d' % (
+                                      FLAGS.table_name, cashregisterid, price, customerid,
+                                      cashregisterid, price, cashregisterid, FLAGS.rows_per_query)
+                                  return sql                        
+                                  
+    db.purchases_index.find({$or: [ {cashregisterid: <cashregisterid>, price: <price>, customerid: {$gte: <customerid>} },
+                                    {cashregisterid: <cashregisterid>, price: {$gt: <price>}},
+                                    {cashregisterid: {$gt: <cashregisterid>}} ]}, 
+                            {cashregisterid:1, price:1, customerid:1, _id:0}).limit(1000);;
+                                */
+                                
+                                BasicDBObject query3a = new BasicDBObject();
+                                query3a.put("cashregisterid", thisCashRegisterId);
+                                query3a.put("price", thisPrice);
+                                query3a.put("customerid", new BasicDBObject("$gte", thisCustomerId));
+                                
+                                BasicDBObject query3b = new BasicDBObject();
+                                query3b.put("cashregisterid", thisCashRegisterId);
+                                query3b.put("price", new BasicDBObject("$gt", thisPrice));
+                                
+                                BasicDBObject query3c = new BasicDBObject();
+                                query3c.put("cashregisterid", new BasicDBObject("$gt", thisCashRegisterId));
+                                
+                                ArrayList<BasicDBObject> list3 = new ArrayList<BasicDBObject>();
+                                list3.add(query3a);
+                                list3.add(query3b);
+                                list3.add(query3c);
+                                
+                                query.put("$or", list3);
+                                
+                                keys.put("cashregisterid",1);
+                                keys.put("price",1);
+                                keys.put("customerid",1);
+                                keys.put("_id",0);
+                                
+                            }
+                            
+                            //logMe("Executed query %d",whichQuery);
                             long now = System.currentTimeMillis();
                             DBCursor cursor = coll.find(query,keys).limit(queryLimit);
                             try {
