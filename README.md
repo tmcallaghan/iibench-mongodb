@@ -9,7 +9,7 @@ Running the benchmark
 
 This example assumes that you already have a MongoDB or TokuMX server running on the same machine as the iiBench client application. You can connect a different server or port by editing the run.simple.bash script.
 
-In it's default configuration it will run for 1 hour.
+In it's default configuration it will run for 1 hour, or 100 million inserts, whichever comes first.
 
 Note, you need to have the MongoDB Java driver in your CLASSPATH, as in "export CLASSPATH=/home/tcallaghan/java_goodies/mongo-2.11.2.jar:.".
 
