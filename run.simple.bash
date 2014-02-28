@@ -12,7 +12,7 @@ export MONGO_BASEMENT=65536
 
 # run the benchmark for this many inserts (or the number of minutes defined by RUN_MINUTES)
 #   valid values : integer > 0
-export MAX_ROWS=10000000
+export MAX_ROWS=100000000
 
 # run the benchmark for this many minutes (or the number of inserts defined by MAX_ROWS)
 #   valid values : intever > 0
