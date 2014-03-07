@@ -32,6 +32,7 @@ public class jmongoiibench {
     public static AtomicLong globalQueriesExecuted = new AtomicLong(0);
     public static AtomicLong globalQueriesTimeMs = new AtomicLong(0);
     public static AtomicLong globalQueriesStarted = new AtomicLong(0);
+    public static AtomicLong globalInsertExceptions = new AtomicLong(0);
     
     public static Writer writer = null;
     public static boolean outputHeader = true;
@@ -384,9 +385,16 @@ public class jmongoiibench {
                         aDocs[i]=doc;
                     }
 
-                    coll.insert(aDocs);
-                    numInserts += documentsPerInsert;
-                    globalInserts.addAndGet(documentsPerInsert);
+                    try {
+                        coll.insert(aDocs);
+                        numInserts += documentsPerInsert;
+                        globalInserts.addAndGet(documentsPerInsert);
+                        
+                    } catch (Exception e) {
+                        logMe("Writer thread %d : EXCEPTION",threadNumber);
+                        e.printStackTrace();
+                        globalInsertExceptions.incrementAndGet();
+                    }
                     
                     if (allDone == 1)
                         break;
@@ -718,6 +726,8 @@ public class jmongoiibench {
                     double thisQueryAvgMs = 0;
                     double thisIntervalAvgQPM = 0;
                     double thisAvgQPM = 0;
+                    
+                    long thisInsertExceptions = globalInsertExceptions.get();
 
                     if (thisIntervalQueriesNum > 0) {
                         thisIntervalQueryAvgMs = thisIntervalQueriesMs/(double)thisIntervalQueriesNum;
@@ -741,15 +751,15 @@ public class jmongoiibench {
                     
                     if (secondsPerFeedback > 0)
                     {
-                        logMe("%,d inserts : %,d seconds : cum ips=%,.2f : int ips=%,.2f : cum avg qry=%,.2f : int avg qry=%,.2f : cum avg qpm=%,.2f : int avg qpm=%,.2f", thisInserts, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM);
+                        logMe("%,d inserts : %,d seconds : cum ips=%,.2f : int ips=%,.2f : cum avg qry=%,.2f : int avg qry=%,.2f : cum avg qpm=%,.2f : int avg qpm=%,.2f : exceptions=%,d", thisInserts, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM, thisInsertExceptions);
                     } else {
-                        logMe("%,d inserts : %,d seconds : cum ips=%,.2f : int ips=%,.2f : cum avg qry=%,.2f : int avg qry=%,.2f : cum avg qpm=%,.2f : int avg qpm=%,.2f", intervalNumber * insertsPerFeedback, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM);
+                        logMe("%,d inserts : %,d seconds : cum ips=%,.2f : int ips=%,.2f : cum avg qry=%,.2f : int avg qry=%,.2f : cum avg qpm=%,.2f : int avg qpm=%,.2f : exceptions=%,d", intervalNumber * insertsPerFeedback, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM, thisInsertExceptions);
                     }
                     
                     try {
                         if (outputHeader)
                         {
-                            writer.write("tot_inserts\telap_secs\tcum_ips\tint_ips\tcum_qry_avg\tint_qry_avg\tcum_qpm\tint_qpm\n");
+                            writer.write("tot_inserts\telap_secs\tcum_ips\tint_ips\tcum_qry_avg\tint_qry_avg\tcum_qpm\tint_qpm\texceptions\n");
                             outputHeader = false;
                         }
                             
@@ -757,9 +767,9 @@ public class jmongoiibench {
                         
                         if (secondsPerFeedback > 0)
                         {
-                            statusUpdate = String.format("%d\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\n",thisInserts, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM);
+                            statusUpdate = String.format("%d\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%,d\n",thisInserts, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM, thisInsertExceptions);
                         } else {
-                            statusUpdate = String.format("%d\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\n",intervalNumber * insertsPerFeedback, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM);
+                            statusUpdate = String.format("%d\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%,d\n",intervalNumber * insertsPerFeedback, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM, thisInsertExceptions);
                         }
                         writer.write(statusUpdate);
                         writer.flush();
