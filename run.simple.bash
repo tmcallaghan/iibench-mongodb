@@ -55,11 +55,15 @@ export NUM_SECONDS_PER_FEEDBACK=-1
 
 # number of additional character fields (semi-compressible) to add to each inserted document
 #   valid values : integer >= 0
-export NUM_CHAR_FIELDS=0
+export NUM_CHAR_FIELDS=1
 
 # size (in bytes) of each additional semi-compressible character field
 #   valid values : integer >= 0
-export LENGTH_CHAR_FIELDS=100
+export LENGTH_CHAR_FIELDS=1000
+
+# percentage of highly compressible data (repeated character "a") in character field
+#   valid values : integer >= 0 and <= 100
+export PERCENT_COMPRESSIBLE=90
 
 # number of secondary indexes to maintain
 #   valid values : integer >= 0 and <= 3
@@ -94,7 +98,7 @@ rm -f $LOG_NAME
 rm -f $BENCHMARK_TSV
 
 T="$(date +%s)"
-java -cp $CLASSPATH:$PWD/src jmongoiibench $DB_NAME $NUM_LOADER_THREADS $MAX_ROWS $NUM_DOCUMENTS_PER_INSERT $NUM_INSERTS_PER_FEEDBACK $NUM_SECONDS_PER_FEEDBACK $BENCHMARK_TSV $MONGO_COMPRESSION $MONGO_BASEMENT $RUN_SECONDS $QUERIES_PER_INTERVAL $QUERY_INTERVAL_SECONDS $QUERY_LIMIT $QUERY_NUM_DOCS_BEGIN $MAX_INSERTS_PER_SECOND $WRITE_CONCERN $MONGO_SERVER $MONGO_PORT $NUM_CHAR_FIELDS $LENGTH_CHAR_FIELDS $NUM_SECONDARY_INDEXES | tee -a $LOG_NAME
+java -cp $CLASSPATH:$PWD/src jmongoiibench $DB_NAME $NUM_LOADER_THREADS $MAX_ROWS $NUM_DOCUMENTS_PER_INSERT $NUM_INSERTS_PER_FEEDBACK $NUM_SECONDS_PER_FEEDBACK $BENCHMARK_TSV $MONGO_COMPRESSION $MONGO_BASEMENT $RUN_SECONDS $QUERIES_PER_INTERVAL $QUERY_INTERVAL_SECONDS $QUERY_LIMIT $QUERY_NUM_DOCS_BEGIN $MAX_INSERTS_PER_SECOND $WRITE_CONCERN $MONGO_SERVER $MONGO_PORT $NUM_CHAR_FIELDS $LENGTH_CHAR_FIELDS $NUM_SECONDARY_INDEXES $PERCENT_COMPRESSIBLE | tee -a $LOG_NAME
 echo "" | tee -a $LOG_NAME
 T="$(($(date +%s)-T))"
 printf "`date` | iibench duration = %02d:%02d:%02d:%02d\n" "$((T/86400))" "$((T/3600%24))" "$((T/60%60))" "$((T%60))" | tee -a $LOG_NAME

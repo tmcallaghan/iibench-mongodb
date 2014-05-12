@@ -66,9 +66,14 @@ public class jmongoiibench {
     public static int numCharFields;
     public static int lengthCharFields;
     public static int numSecondaryIndexes;
+    public static int percentCompressible;
+    public static int numCompressibleCharacters;
+    public static int numUncompressibleCharacters;
 
     public static int randomStringLength = 4*1024*1024;
     public static String randomStringHolder;
+    public static int compressibleStringLength =  4*1024*1024;
+    public static String compressibleStringHolder;
     
     public static int allDone = 0;
     
@@ -76,9 +81,9 @@ public class jmongoiibench {
     }
 
     public static void main (String[] args) throws Exception {
-        if (args.length != 21) {
+        if (args.length != 22) {
             logMe("*** ERROR : CONFIGURATION ISSUE ***");
-            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes]");
+            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes] [percent compressible]");
             System.exit(1);
         }
         
@@ -103,6 +108,7 @@ public class jmongoiibench {
         numCharFields = Integer.valueOf(args[18]);
         lengthCharFields = Integer.valueOf(args[19]);
         numSecondaryIndexes = Integer.valueOf(args[20]);
+        percentCompressible = Integer.valueOf(args[21]);
         
         WriteConcern myWC = new WriteConcern();
         if (myWriteConcern.toLowerCase().equals("fsync_safe")) {
@@ -143,6 +149,15 @@ public class jmongoiibench {
             msBetweenQueries = (long)((1000.0 * (double)queryIntervalSeconds) / (double)queriesPerInterval);
         }
         
+        if ((percentCompressible < 0) || (percentCompressible > 100)) {
+            logMe("*** ERROR : INVALID PERCENT COMPRESSIBLE, MUST BE >=0 and <= 100 ***");
+            logMe("  %d secondary indexes is not supported",percentCompressible);
+            System.exit(1);
+        }
+        
+        numCompressibleCharacters = (int) (((double) percentCompressible / 100.0) * (double) lengthCharFields);
+        numUncompressibleCharacters = (int) (((100.0 - (double) percentCompressible) / 100.0) * (double) lengthCharFields);
+
         logMe("Application Parameters");
         logMe("--------------------------------------------------");
         logMe("  database name = %s",dbName);
@@ -157,6 +172,7 @@ public class jmongoiibench {
         logMe("  Feedback every %,d inserts(s)",insertsPerFeedback);
         logMe("  logging to file %s",logFileName);
         logMe("  Run for %,d second(s)",numSeconds);
+        logMe("  Extra character fields are %d percent compressible",percentCompressible);
         if (queriesPerMinute > 0.0)
         {
             logMe("  Attempting %,.2f queries per minute",queriesPerMinute);
@@ -206,6 +222,10 @@ public class jmongoiibench {
         }
         
         logMe("--------------------------------------------------");
+        
+        if (writerThreads > 1) {
+            numMaxInserts = numMaxInserts / writerThreads;
+        }
 
         try {
             writer = new BufferedWriter(new FileWriter(new File(logFileName)));
@@ -256,14 +276,23 @@ public class jmongoiibench {
         // END: create the collection
 
 
+        java.util.Random rand = new java.util.Random();
+
         // create random string holder
         logMe("  creating %,d bytes of random character data...",randomStringLength);
-        java.util.Random rand = new java.util.Random();
         char[] tempString = new char[randomStringLength];
         for (int i = 0 ; i < randomStringLength ; i++) { 
             tempString[i] = (char) (rand.nextInt(26) + 'a');
         }
         randomStringHolder = new String(tempString);
+
+        // create compressible string holder
+        logMe("  creating %,d bytes of compressible character data...",compressibleStringLength);
+        char[] tempStringCompressible = new char[compressibleStringLength];
+        for (int i = 0 ; i < compressibleStringLength ; i++) { 
+            tempStringCompressible[i] = 'a';
+        }
+        compressibleStringHolder = new String(tempStringCompressible);
 
 
         jmongoiibench t = new jmongoiibench();
@@ -380,7 +409,7 @@ public class jmongoiibench {
                         doc.put("price", thisPrice);
                         for (int charField = 1; charField <= numCharFields; charField++) {
                             int startPosition = rand.nextInt(randomStringLength-lengthCharFields);
-                            doc.put("cf"+Integer.toString(charField), randomStringHolder.substring(startPosition,startPosition+lengthCharFields));
+                            doc.put("cf"+Integer.toString(charField), randomStringHolder.substring(startPosition,startPosition+numUncompressibleCharacters) + compressibleStringHolder.substring(startPosition,startPosition+numCompressibleCharacters));
                         }
                         aDocs[i]=doc;
                     }
