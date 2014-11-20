@@ -60,6 +60,7 @@ public class jmongoiibench {
     public static Integer queryLimit;
     public static Integer queryBeginNumDocs;
     public static Integer maxInsertsPerSecond;
+    public static Integer maxThreadInsertsPerSecond;
     public static String myWriteConcern;
     public static String serverName;
     public static int serverPort;
@@ -109,6 +110,8 @@ public class jmongoiibench {
         lengthCharFields = Integer.valueOf(args[19]);
         numSecondaryIndexes = Integer.valueOf(args[20]);
         percentCompressible = Integer.valueOf(args[21]);
+        
+        maxThreadInsertsPerSecond = (maxInsertsPerSecond / writerThreads);
         
         WriteConcern myWC = new WriteConcern();
         if (myWriteConcern.toLowerCase().equals("fsync_safe")) {
@@ -168,6 +171,7 @@ public class jmongoiibench {
         logMe("  %d secondary indexes",numSecondaryIndexes);
         logMe("  Documents Per Insert = %d",documentsPerInsert);
         logMe("  Maximum of %,d insert(s) per second",maxInsertsPerSecond);
+        logMe("  Maximum of %,d insert(s) per second per writer thread",maxThreadInsertsPerSecond);
         logMe("  Feedback every %,d seconds(s)",secondsPerFeedback);
         logMe("  Feedback every %,d inserts(s)",insertsPerFeedback);
         logMe("  logging to file %s",logFileName);
@@ -310,7 +314,7 @@ public class jmongoiibench {
         // start the loaders
         for (int i=0; i<writerThreads; i++) {
             globalWriterThreads.incrementAndGet();
-            tWriterThreads[i] = new Thread(t.new MyWriter(writerThreads, i, numMaxInserts, db, maxInsertsPerSecond));
+            tWriterThreads[i] = new Thread(t.new MyWriter(writerThreads, i, numMaxInserts, db, maxThreadInsertsPerSecond));
             tWriterThreads[i].start();
         }
         
