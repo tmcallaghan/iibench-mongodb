@@ -63,6 +63,7 @@ public class jmongoiibench {
     public static Integer maxThreadInsertsPerSecond;
     public static String myWriteConcern;
     public static String serverName;
+    public static String createCollection;
     public static int serverPort;
     public static int numCharFields;
     public static int lengthCharFields;
@@ -82,9 +83,9 @@ public class jmongoiibench {
     }
 
     public static void main (String[] args) throws Exception {
-        if (args.length != 22) {
+        if (args.length != 23) {
             logMe("*** ERROR : CONFIGURATION ISSUE ***");
-            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes] [percent compressible]");
+            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection]");
             System.exit(1);
         }
         
@@ -110,6 +111,7 @@ public class jmongoiibench {
         lengthCharFields = Integer.valueOf(args[19]);
         numSecondaryIndexes = Integer.valueOf(args[20]);
         percentCompressible = Integer.valueOf(args[21]);
+        createCollection = args[22].toLowerCase();
         
         maxThreadInsertsPerSecond = (maxInsertsPerSecond / writerThreads);
         
@@ -237,48 +239,54 @@ public class jmongoiibench {
             e.printStackTrace();
         }
 
-        // create the collection
-        String collectionName = "purchases_index";
-
-        if (indexTechnology.toLowerCase().equals("tokumx")) {
-            DBObject cmd = new BasicDBObject();
-            cmd.put("create", collectionName);
-            cmd.put("compression", compressionType);
-            cmd.put("readPageSize", basementSize);
-            CommandResult result = db.command(cmd);
-            //logMe(result.toString());
-        } else if (indexTechnology.toLowerCase().equals("mongo")) {
-            // nothing special to do for a regular mongo collection
-        } else {
-            // unknown index technology, abort
-            logMe(" *** Unknown Indexing Technology %s, shutting down",indexTechnology);
-            System.exit(1);
+        if (createCollection.equals("n"))
+        {
+            logMe("Skipping collection creation");
         }
+        else
+        {
+            // create the collection
+            String collectionName = "purchases_index";
+    
+            if (indexTechnology.toLowerCase().equals("tokumx")) {
+                DBObject cmd = new BasicDBObject();
+                cmd.put("create", collectionName);
+                cmd.put("compression", compressionType);
+                cmd.put("readPageSize", basementSize);
+                CommandResult result = db.command(cmd);
+                //logMe(result.toString());
+            } else if (indexTechnology.toLowerCase().equals("mongo")) {
+                // nothing special to do for a regular mongo collection
+            } else {
+                // unknown index technology, abort
+                logMe(" *** Unknown Indexing Technology %s, shutting down",indexTechnology);
+                System.exit(1);
+            }
 
-        DBCollection coll = db.getCollection(collectionName);
-
-        BasicDBObject idxOptions = new BasicDBObject();
-        idxOptions.put("background",false);
-
-        if (indexTechnology.toLowerCase().equals("tokumx")) {
-            idxOptions.put("compression",compressionType);
-            idxOptions.put("readPageSize",basementSize);
+            DBCollection coll = db.getCollection(collectionName);
+    
+            BasicDBObject idxOptions = new BasicDBObject();
+            idxOptions.put("background",false);
+    
+            if (indexTechnology.toLowerCase().equals("tokumx")) {
+                idxOptions.put("compression",compressionType);
+                idxOptions.put("readPageSize",basementSize);
+            }
+    
+            if (numSecondaryIndexes >= 1) {
+                logMe(" *** creating secondary index on price + customerid");
+                coll.ensureIndex(new BasicDBObject("price", 1).append("customerid", 1), idxOptions);
+            }
+            if (numSecondaryIndexes >= 2) {
+                logMe(" *** creating secondary index on cashregisterid + price + customerid");
+                coll.ensureIndex(new BasicDBObject("cashregisterid", 1).append("price", 1).append("customerid", 1), idxOptions);
+            }
+            if (numSecondaryIndexes >= 3) {
+                logMe(" *** creating secondary index on price + dateandtime + customerid");
+                coll.ensureIndex(new BasicDBObject("price", 1).append("dateandtime", 1).append("customerid", 1), idxOptions);
+            }
+            // END: create the collection
         }
-
-        if (numSecondaryIndexes >= 1) {
-            logMe(" *** creating secondary index on price + customerid");
-            coll.ensureIndex(new BasicDBObject("price", 1).append("customerid", 1), idxOptions);
-        }
-        if (numSecondaryIndexes >= 2) {
-            logMe(" *** creating secondary index on cashregisterid + price + customerid");
-            coll.ensureIndex(new BasicDBObject("cashregisterid", 1).append("price", 1).append("customerid", 1), idxOptions);
-        }
-        if (numSecondaryIndexes >= 3) {
-            logMe(" *** creating secondary index on price + dateandtime + customerid");
-            coll.ensureIndex(new BasicDBObject("price", 1).append("dateandtime", 1).append("customerid", 1), idxOptions);
-        }
-        // END: create the collection
-
 
         java.util.Random rand = new java.util.Random();
 
