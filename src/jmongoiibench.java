@@ -1,3 +1,8 @@
+import com.codahale.metrics.*;
+import org.apache.log4j.BasicConfigurator;
+import java.util.concurrent.TimeUnit;
+import java.util.Locale;
+
 //import com.mongodb.Mongo;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
@@ -26,12 +31,13 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class jmongoiibench {
-    public static AtomicLong globalInserts = new AtomicLong(0);
+    static final MetricRegistry metrics = new MetricRegistry();
+    private final Timer insertLatencies = metrics.timer(MetricRegistry.name("iibench", "inserts"));
+    private final Timer queryLatencies = metrics.timer(MetricRegistry.name("iibench", "queries"));
+    private final Meter exceptions = metrics.meter(MetricRegistry.name("iibench", "exceptions"));
+
     public static AtomicLong globalWriterThreads = new AtomicLong(0);
     public static AtomicLong globalQueryThreads = new AtomicLong(0);
-    public static AtomicLong globalQueriesExecuted = new AtomicLong(0);
-    public static AtomicLong globalQueriesTimeMs = new AtomicLong(0);
-    public static AtomicLong globalQueriesStarted = new AtomicLong(0);
     public static AtomicLong globalInsertExceptions = new AtomicLong(0);
     
     public static Writer writer = null;
@@ -83,6 +89,8 @@ public class jmongoiibench {
     }
 
     public static void main (String[] args) throws Exception {
+        BasicConfigurator.configure();
+
         if (args.length != 23) {
             logMe("*** ERROR : CONFIGURATION ISSUE ***");
             logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection]");
@@ -201,6 +209,19 @@ public class jmongoiibench {
         
         DB db = m.getDB(dbName);
         
+        final ConsoleReporter consoleReporter = ConsoleReporter.forRegistry(metrics)
+            .convertRatesTo(TimeUnit.SECONDS)
+            .convertDurationsTo(TimeUnit.MILLISECONDS)
+            .build();
+        consoleReporter.start(10, TimeUnit.SECONDS);
+
+        final CsvReporter csvReporter = CsvReporter.forRegistry(metrics)
+            .formatFor(Locale.US)
+            .convertRatesTo(TimeUnit.SECONDS)
+            .convertDurationsTo(TimeUnit.MILLISECONDS)
+            .build(new File(logFileName));
+        csvReporter.start(1, TimeUnit.SECONDS);
+
         // determine server type : mongo or tokumx
         DBObject checkServerCmd = new BasicDBObject();
         CommandResult commandResult = db.command("buildInfo");
@@ -231,12 +252,6 @@ public class jmongoiibench {
         
         if (writerThreads > 1) {
             numMaxInserts = numMaxInserts / writerThreads;
-        }
-
-        try {
-            writer = new BufferedWriter(new FileWriter(new File(logFileName)));
-        } catch (IOException e) {
-            e.printStackTrace();
         }
 
         if (createCollection.equals("n"))
@@ -309,9 +324,6 @@ public class jmongoiibench {
 
         jmongoiibench t = new jmongoiibench();
 
-        Thread reporterThread = new Thread(t.new MyReporter());
-        reporterThread.start();
-
         Thread queryThread = new Thread(t.new MyQuery(1, 1, numMaxInserts, db));
         if (queriesPerMinute > 0.0) {
             queryThread.start();
@@ -332,10 +344,6 @@ public class jmongoiibench {
             e.printStackTrace();
         }
 
-        // wait for reporter thread to terminate
-        if (reporterThread.isAlive())
-            reporterThread.join();
-
         // wait for query thread to terminate
         if (queryThread.isAlive())
             queryThread.join();
@@ -344,14 +352,6 @@ public class jmongoiibench {
         for (int i=0; i<writerThreads; i++) {
             if (tWriterThreads[i].isAlive())
                 tWriterThreads[i].join();
-        }
-        
-        try {
-            if (writer != null) {
-                writer.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
         
         // m.dropDatabase("mydb");
@@ -426,15 +426,16 @@ public class jmongoiibench {
                         aDocs[i]=doc;
                     }
 
+                    final Timer.Context context = insertLatencies.time();
                     try {
                         coll.insert(aDocs);
                         numInserts += documentsPerInsert;
-                        globalInserts.addAndGet(documentsPerInsert);
-                        
                     } catch (Exception e) {
                         logMe("Writer thread %d : EXCEPTION",threadNumber);
                         e.printStackTrace();
-                        globalInsertExceptions.incrementAndGet();
+                        exceptions.mark();
+                    } finally {
+                        context.stop();
                     }
                     
                     if (allDone == 1)
@@ -501,13 +502,11 @@ public class jmongoiibench {
                         nextQueryMillis = thisNow + msBetweenQueries;
 
                         // check if number of inserts reached
-                        if (globalInserts.get() >= queryBeginNumDocs) {
+                        if (insertLatencies.getCount() >= queryBeginNumDocs) {
                             if (outputStarted)
                             {
                                 logMe("Query thread %d : now running",threadNumber,queryBeginNumDocs);
                                 outputStarted = false;
-                                // set query start time
-                                globalQueriesStarted.set(thisNow);
                             }
                             
                             whichQuery++;
@@ -674,22 +673,20 @@ public class jmongoiibench {
                             }
                             
                             //logMe("Executed query %d",whichQuery);
-                            long now = System.currentTimeMillis();
-                            DBCursor cursor = coll.find(query,keys).limit(queryLimit);
+                            final Timer.Context context = queryLatencies.time();
                             try {
-                                while(cursor.hasNext()) {
-                                    //System.out.println(cursor.next());
-                                    cursor.next();
+                                DBCursor cursor = coll.find(query,keys).limit(queryLimit);
+                                try {
+                                    while(cursor.hasNext()) {
+                                        //System.out.println(cursor.next());
+                                        cursor.next();
+                                    }
+                                } finally {
+                                    cursor.close();
                                 }
                             } finally {
-                                cursor.close();
+                                context.stop();
                             }
-                            long elapsed = System.currentTimeMillis() - now;
-                    
-                            //logMe("Query thread %d : performing : %s",threadNumber,thisSelect);
-                    
-                            globalQueriesExecuted.incrementAndGet();
-                            globalQueriesTimeMs.addAndGet(elapsed);
                         } else {
                             if (outputWaiting)
                             {
@@ -708,190 +705,6 @@ public class jmongoiibench {
             long numQueries = globalQueryThreads.decrementAndGet();
         }
     }
-
-    
-    // reporting thread, outputs information to console and file
-    class MyReporter implements Runnable {
-        public void run()
-        {
-            long t0 = System.currentTimeMillis();
-            long lastInserts = 0;
-            long lastQueriesNum = 0;
-            long lastQueriesMs = 0;
-            long lastMs = t0;
-            long intervalNumber = 0;
-            long nextFeedbackMillis = t0 + (1000 * secondsPerFeedback * (intervalNumber + 1));
-            long nextFeedbackInserts = lastInserts + insertsPerFeedback;
-            long thisInserts = 0;
-            long thisQueriesNum = 0;
-            long thisQueriesMs = 0;
-            long thisQueriesStarted = 0;
-            long endDueToTime = System.currentTimeMillis() + (1000 * numSeconds);
-
-            while (allDone == 0)
-            {
-                try {
-                    Thread.sleep(100);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                
-                long now = System.currentTimeMillis();
-                
-                if (now >= endDueToTime)
-                {
-                    allDone = 1;
-                }
-                
-                thisInserts = globalInserts.get();
-                thisQueriesNum = globalQueriesExecuted.get();
-                thisQueriesMs = globalQueriesTimeMs.get();
-                thisQueriesStarted = globalQueriesStarted.get();
-                if (((now > nextFeedbackMillis) && (secondsPerFeedback > 0)) ||
-                    ((thisInserts >= nextFeedbackInserts) && (insertsPerFeedback > 0)))
-                {
-                    intervalNumber++;
-                    nextFeedbackMillis = t0 + (1000 * secondsPerFeedback * (intervalNumber + 1));
-                    nextFeedbackInserts = (intervalNumber + 1) * insertsPerFeedback;
-
-                    long elapsed = now - t0;
-                    long thisIntervalMs = now - lastMs;
-                    
-                    long thisIntervalInserts = thisInserts - lastInserts;
-                    double thisIntervalInsertsPerSecond = thisIntervalInserts/(double)thisIntervalMs*1000.0;
-                    double thisInsertsPerSecond = thisInserts/(double)elapsed*1000.0;
-
-                    long thisIntervalQueriesNum = thisQueriesNum - lastQueriesNum;
-                    long thisIntervalQueriesMs = thisQueriesMs - lastQueriesMs;
-                    double thisIntervalQueryAvgMs = 0;
-                    double thisQueryAvgMs = 0;
-                    double thisIntervalAvgQPM = 0;
-                    double thisAvgQPM = 0;
-                    
-                    long thisInsertExceptions = globalInsertExceptions.get();
-
-                    if (thisIntervalQueriesNum > 0) {
-                        thisIntervalQueryAvgMs = thisIntervalQueriesMs/(double)thisIntervalQueriesNum;
-                    }
-                    if (thisQueriesNum > 0) {
-                        thisQueryAvgMs = thisQueriesMs/(double)thisQueriesNum;
-                    }
-                    
-                    if (thisQueriesStarted > 0)
-                    {
-                        long adjustedElapsed = now - thisQueriesStarted;
-                        if (adjustedElapsed > 0)
-                        {
-                            thisAvgQPM = (double)thisQueriesNum/((double)adjustedElapsed/1000.0/60.0);
-                        }
-                        if (thisIntervalMs > 0)
-                        {
-                            thisIntervalAvgQPM = (double)thisIntervalQueriesNum/((double)thisIntervalMs/1000.0/60.0);
-                        }
-                    }
-                    
-                    if (secondsPerFeedback > 0)
-                    {
-                        logMe("%,d inserts : %,d seconds : cum ips=%,.2f : int ips=%,.2f : cum avg qry=%,.2f : int avg qry=%,.2f : cum avg qpm=%,.2f : int avg qpm=%,.2f : exceptions=%,d", thisInserts, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM, thisInsertExceptions);
-                    } else {
-                        logMe("%,d inserts : %,d seconds : cum ips=%,.2f : int ips=%,.2f : cum avg qry=%,.2f : int avg qry=%,.2f : cum avg qpm=%,.2f : int avg qpm=%,.2f : exceptions=%,d", intervalNumber * insertsPerFeedback, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM, thisInsertExceptions);
-                    }
-                    
-                    try {
-                        if (outputHeader)
-                        {
-                            writer.write("tot_inserts\telap_secs\tcum_ips\tint_ips\tcum_qry_avg\tint_qry_avg\tcum_qpm\tint_qpm\texceptions\n");
-                            outputHeader = false;
-                        }
-                            
-                        String statusUpdate = "";
-                        
-                        if (secondsPerFeedback > 0)
-                        {
-                            statusUpdate = String.format("%d\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%,d\n",thisInserts, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM, thisInsertExceptions);
-                        } else {
-                            statusUpdate = String.format("%d\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%,d\n",intervalNumber * insertsPerFeedback, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM, thisInsertExceptions);
-                        }
-                        writer.write(statusUpdate);
-                        writer.flush();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-
-                    lastInserts = thisInserts;
-                    lastQueriesNum = thisQueriesNum;
-                    lastQueriesMs = thisQueriesMs;
-
-                    lastMs = now;
-                }
-            }
-            
-            // output final numbers...
-            long now = System.currentTimeMillis();
-            thisInserts = globalInserts.get();
-            thisQueriesNum = globalQueriesExecuted.get();
-            thisQueriesMs = globalQueriesTimeMs.get();
-            thisQueriesStarted = globalQueriesStarted.get();
-            intervalNumber++;
-            nextFeedbackMillis = t0 + (1000 * secondsPerFeedback * (intervalNumber + 1));
-            nextFeedbackInserts = (intervalNumber + 1) * insertsPerFeedback;
-            long elapsed = now - t0;
-            long thisIntervalMs = now - lastMs;
-            long thisIntervalInserts = thisInserts - lastInserts;
-            double thisIntervalInsertsPerSecond = thisIntervalInserts/(double)thisIntervalMs*1000.0;
-            double thisInsertsPerSecond = thisInserts/(double)elapsed*1000.0;
-            long thisIntervalQueriesNum = thisQueriesNum - lastQueriesNum;
-            long thisIntervalQueriesMs = thisQueriesMs - lastQueriesMs;
-            double thisIntervalQueryAvgMs = 0;
-            double thisQueryAvgMs = 0;
-            double thisIntervalAvgQPM = 0;
-            double thisAvgQPM = 0;
-            if (thisIntervalQueriesNum > 0) {
-                thisIntervalQueryAvgMs = thisIntervalQueriesMs/(double)thisIntervalQueriesNum;
-            }
-            if (thisQueriesNum > 0) {
-                thisQueryAvgMs = thisQueriesMs/(double)thisQueriesNum;
-            }
-            if (thisQueriesStarted > 0)
-            {
-                long adjustedElapsed = now - thisQueriesStarted;
-                if (adjustedElapsed > 0)
-                {
-                    thisAvgQPM = (double)thisQueriesNum/((double)adjustedElapsed/1000.0/60.0);
-                }
-                if (thisIntervalMs > 0)
-                {
-                    thisIntervalAvgQPM = (double)thisIntervalQueriesNum/((double)thisIntervalMs/1000.0/60.0);
-                }
-            }
-            if (secondsPerFeedback > 0)
-            {
-                logMe("%,d inserts : %,d seconds : cum ips=%,.2f : int ips=%,.2f : cum avg qry=%,.2f : int avg qry=%,.2f : cum avg qpm=%,.2f : int avg qpm=%,.2f", thisInserts, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM);
-            } else {
-                logMe("%,d inserts : %,d seconds : cum ips=%,.2f : int ips=%,.2f : cum avg qry=%,.2f : int avg qry=%,.2f : cum avg qpm=%,.2f : int avg qpm=%,.2f", intervalNumber * insertsPerFeedback, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM);
-            }
-            try {
-                if (outputHeader)
-                {
-                    writer.write("tot_inserts\telap_secs\tcum_ips\tint_ips\tcum_qry_avg\tint_qry_avg\tcum_qpm\tint_qpm\n");
-                    outputHeader = false;
-                }
-                String statusUpdate = "";
-                if (secondsPerFeedback > 0)
-                {
-                    statusUpdate = String.format("%d\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\n",thisInserts, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM);
-                } else {
-                    statusUpdate = String.format("%d\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\n",intervalNumber * insertsPerFeedback, elapsed / 1000l, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisQueryAvgMs, thisIntervalQueryAvgMs, thisAvgQPM, thisIntervalAvgQPM);
-                }
-                writer.write(statusUpdate);
-                writer.flush();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            
-        }
-    }
-
 
     public static void logMe(String format, Object... args) {
         System.out.println(Thread.currentThread() + String.format(format, args));
