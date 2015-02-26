@@ -32,9 +32,9 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class jmongoiibench {
     static final MetricRegistry metrics = new MetricRegistry();
-    private final Timer insertLatencies = metrics.timer(MetricRegistry.name("iibench", "inserts"));
-    private final Timer queryLatencies = metrics.timer(MetricRegistry.name("iibench", "queries"));
-    private final Meter exceptions = metrics.meter(MetricRegistry.name("iibench", "exceptions"));
+    private final Timer insertLatencies = metrics.timer(MetricRegistry.name("iib", "inserts"));
+    private final Timer queryLatencies = metrics.timer(MetricRegistry.name("iib", "queries"));
+    private final Meter exceptions = metrics.meter(MetricRegistry.name("iib", "exc"));
 
     public static AtomicLong globalWriterThreads = new AtomicLong(0);
     public static AtomicLong globalQueryThreads = new AtomicLong(0);
@@ -209,7 +209,7 @@ public class jmongoiibench {
         
         DB db = m.getDB(dbName);
         
-        final ConsoleReporter consoleReporter = ConsoleReporter.forRegistry(metrics)
+        final ShortConsoleReporter consoleReporter = ShortConsoleReporter.forRegistry(metrics)
             .convertRatesTo(TimeUnit.SECONDS)
             .convertDurationsTo(TimeUnit.MILLISECONDS)
             .build();
