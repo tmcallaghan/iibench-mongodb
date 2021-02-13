@@ -1,29 +1,22 @@
 //import com.mongodb.Mongo;
-import com.mongodb.MongoClient;
-import com.mongodb.MongoClientOptions;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicLong;
+
+import com.mongodb.BasicDBObject;
+import com.mongodb.CommandResult;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
-import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
-import com.mongodb.DBCursor;
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientOptions;
 import com.mongodb.ServerAddress;
 import com.mongodb.WriteConcern;
-import com.mongodb.CommandResult;
-
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Properties;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.File;
-import java.io.Writer;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class jmongoiibench {
     public static AtomicLong globalInserts = new AtomicLong(0);
@@ -496,206 +489,215 @@ public class jmongoiibench {
                     
                     long thisNow = System.currentTimeMillis();
                     
-                    // wait until my next runtime
-                    if (thisNow > nextQueryMillis) {
-                        nextQueryMillis = thisNow + msBetweenQueries;
+                    // Wait until the next run time if necessary.
+                    long sleeptime = nextQueryMillis - thisNow;
+                    if (sleeptime > 0) {
+                      try {Thread.sleep(sleeptime);}
+                       catch (Exception e)
+                        {
+                           // Log and continue.
+                           logMe("Sleep exception: " + e.getMessage());
+                        }
+                    }
+                    
+                    // Increment the next run time.
+                    nextQueryMillis = System.currentTimeMillis() + msBetweenQueries;
+                    
+                    // check if number of inserts reached
+                    if (globalInserts.get() >= queryBeginNumDocs) {
+                        if (outputStarted)
+                        {
+                            logMe("Query thread %d : now running",threadNumber,queryBeginNumDocs);
+                            outputStarted = false;
+                            // set query start time
+                            globalQueriesStarted.set(thisNow);
+                        }
+                            
+                        whichQuery++;
+                        if (whichQuery > 3) {
+                            whichQuery = 1;
+                        }
+                            
+                        int thisCustomerId = rand.nextInt(numCustomers);
+                        double thisPrice = ((rand.nextDouble() * maxPrice) + (double) thisCustomerId) / 100.0;
+                        int thisCashRegisterId = rand.nextInt(numCashRegisters);
+                        int thisProductId = rand.nextInt(numProducts);
+                        long thisRandomTime = t0 + (long) ((double) (thisNow - t0) * rand.nextDouble());
+                            
+                        BasicDBObject query = new BasicDBObject();
+                        BasicDBObject keys = new BasicDBObject();
 
-                        // check if number of inserts reached
-                        if (globalInserts.get() >= queryBeginNumDocs) {
-                            if (outputStarted)
-                            {
-                                logMe("Query thread %d : now running",threadNumber,queryBeginNumDocs);
-                                outputStarted = false;
-                                // set query start time
-                                globalQueriesStarted.set(thisNow);
-                            }
+                        // query <NOT RUNNING>
+                        // *** WE ARE NOT CURRENTLY RUNNING THIS QUERY, THE _id VALUES ARE AUTO-GENERATED ***
+                        /*
+                        def generate_pk_query(row_count, start_time):
+                          if FLAGS.with_max_table_rows and row_count > FLAGS.max_table_rows :
+                            pk_txid = row_count - FLAGS.max_table_rows + random.randrange(FLAGS.max_table_rows)
+                          else:
+                            pk_txid = random.randrange(max(row_count,1))
                             
-                            whichQuery++;
-                            if (whichQuery > 3) {
-                                whichQuery = 1;
-                            }
+                          sql = 'SELECT transactionid FROM %s WHERE '\
+                                '(transactionid >= %d) LIMIT %d' % (
+                              FLAGS.table_name, pk_txid, FLAGS.rows_per_query)
+                          return sql
+                        */
                             
-                            int thisCustomerId = rand.nextInt(numCustomers);
-                            double thisPrice = ((rand.nextDouble() * maxPrice) + (double) thisCustomerId) / 100.0;
-                            int thisCashRegisterId = rand.nextInt(numCashRegisters);
-                            int thisProductId = rand.nextInt(numProducts);
-                            long thisRandomTime = t0 + (long) ((double) (thisNow - t0) * rand.nextDouble());
-                            
-                            BasicDBObject query = new BasicDBObject();
-                            BasicDBObject keys = new BasicDBObject();
-
-                            // query <NOT RUNNING>
-                            // *** WE ARE NOT CURRENTLY RUNNING THIS QUERY, THE _id VALUES ARE AUTO-GENERATED ***
+                        if (whichQuery == 1) {
+                            // query 1
                             /*
-                            def generate_pk_query(row_count, start_time):
-                              if FLAGS.with_max_table_rows and row_count > FLAGS.max_table_rows :
-                                pk_txid = row_count - FLAGS.max_table_rows + random.randrange(FLAGS.max_table_rows)
-                              else:
-                                pk_txid = random.randrange(max(row_count,1))
-                            
-                              sql = 'SELECT transactionid FROM %s WHERE '\
-                                    '(transactionid >= %d) LIMIT %d' % (
-                                  FLAGS.table_name, pk_txid, FLAGS.rows_per_query)
+                            def generate_pdc_query(row_count, start_time):
+                              customerid = random.randrange(0, FLAGS.customers)
+                              price = ((random.random() * FLAGS.max_price) + customerid) / 100.0
+                              
+                              random_time = ((time.time() - start_time) * random.random()) + start_time
+                              when = random_time + (random.randrange(max(row_count,1)) / 100000.0)
+                              datetime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(when))
+                               
+                              sql = 'SELECT price,dateandtime,customerid FROM %s FORCE INDEX (pdc) WHERE '\
+                                    '(price=%.2f and dateandtime="%s" and customerid>=%d) OR '\
+                                    '(price=%.2f and dateandtime>"%s") OR '\
+                                    '(price>%.2f) LIMIT %d' % (FLAGS.table_name, price,
+                                                               datetime, customerid,
+                                                               price, datetime, price,
+                                                               FLAGS.rows_per_query)
                               return sql
-                            */
-                            
-                            if (whichQuery == 1) {
-                                // query 1
-                                /*
-                                def generate_pdc_query(row_count, start_time):
-                                  customerid = random.randrange(0, FLAGS.customers)
-                                  price = ((random.random() * FLAGS.max_price) + customerid) / 100.0
-                                
-                                  random_time = ((time.time() - start_time) * random.random()) + start_time
-                                  when = random_time + (random.randrange(max(row_count,1)) / 100000.0)
-                                  datetime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(when))
-                                
-                                  sql = 'SELECT price,dateandtime,customerid FROM %s FORCE INDEX (pdc) WHERE '\
-                                        '(price=%.2f and dateandtime="%s" and customerid>=%d) OR '\
-                                        '(price=%.2f and dateandtime>"%s") OR '\
-                                        '(price>%.2f) LIMIT %d' % (FLAGS.table_name, price,
-                                                                   datetime, customerid,
-                                                                   price, datetime, price,
-                                                                   FLAGS.rows_per_query)
-                                  return sql
                                   
     db.purchases_index.find({$or: [ {price: <price>, dateandtime: <dateandtime>, customerid: {$gte: <customerid>}},
                                     {price: <price>, dateandtime: {$gt: <dateandtime>}},
                                     {price: {$gt: <price>}} ]}, 
                             {price:1, dateandtime:1, customerid:1, _id:0}).limit(1000);
-                                */
+                            */
                                 
-                                BasicDBObject query1a = new BasicDBObject();
-                                query1a.put("price", thisPrice);
-                                query1a.put("dateandtime", thisRandomTime);
-                                query1a.put("customerid", new BasicDBObject("$gte", thisCustomerId));
+                            BasicDBObject query1a = new BasicDBObject();
+                            query1a.put("price", thisPrice);
+                            query1a.put("dateandtime", thisRandomTime);
+                            query1a.put("customerid", new BasicDBObject("$gte", thisCustomerId));
                                 
-                                BasicDBObject query1b = new BasicDBObject();
-                                query1b.put("price", thisPrice);
-                                query1b.put("dateandtime", new BasicDBObject("$gt", thisRandomTime));
+                            BasicDBObject query1b = new BasicDBObject();
+                            query1b.put("price", thisPrice);
+                            query1b.put("dateandtime", new BasicDBObject("$gt", thisRandomTime));
                                 
-                                BasicDBObject query1c = new BasicDBObject();
-                                query1c.put("price", new BasicDBObject("$gt", thisPrice));
+                            BasicDBObject query1c = new BasicDBObject();
+                            query1c.put("price", new BasicDBObject("$gt", thisPrice));
                                 
-                                ArrayList<BasicDBObject> list1 = new ArrayList<BasicDBObject>();
-                                list1.add(query1a);
-                                list1.add(query1b);
-                                list1.add(query1c);
+                            ArrayList<BasicDBObject> list1 = new ArrayList<BasicDBObject>();
+                            list1.add(query1a);
+                            list1.add(query1b);
+                            list1.add(query1c);
                                 
-                                query.put("$or", list1);
+                            query.put("$or", list1);
                                 
-                                keys.put("price",1);
-                                keys.put("dateandtime",1);
-                                keys.put("customerid",1);
-                                keys.put("_id",0);
+                            keys.put("price",1);
+                            keys.put("dateandtime",1);
+                            keys.put("customerid",1);
+                            keys.put("_id",0);
                                 
-                            } else if (whichQuery == 2) {
-                                // query 2
-                                /*
-                                def generate_market_query(row_count, start_time):
-                                  customerid = random.randrange(0, FLAGS.customers)
-                                  price = ((random.random() * FLAGS.max_price) + customerid) / 100.0
+                        } else if (whichQuery == 2) {
+                            // query 2
+                            /*
+                            def generate_market_query(row_count, start_time):
+                              customerid = random.randrange(0, FLAGS.customers)
+                              price = ((random.random() * FLAGS.max_price) + customerid) / 100.0
                                 
-                                  sql = 'SELECT price,customerid FROM %s FORCE INDEX (marketsegment) WHERE '\
-                                        '(price=%.2f and customerid>=%d) OR '\
-                                        '(price>%.2f) LIMIT %d' % (
-                                      FLAGS.table_name, price, customerid, price, FLAGS.rows_per_query)
-                                  return sql
+                              sql = 'SELECT price,customerid FROM %s FORCE INDEX (marketsegment) WHERE '\
+                                    '(price=%.2f and customerid>=%d) OR '\
+                                    '(price>%.2f) LIMIT %d' % (
+                                  FLAGS.table_name, price, customerid, price, FLAGS.rows_per_query)
+                              return sql
     
     db.purchases_index.find({$or: [ {price: <price>, customerid: {$gte: <customerid>} },
                                     {price: {$gt: <price>}} ]}, 
-                            {price:1, customerid:1, _id:0}).limit(1000);
-                                */
+                             {price:1, customerid:1, _id:0}).limit(1000);
+                            */
                                 
-                                BasicDBObject query2a = new BasicDBObject();
-                                query2a.put("price", thisPrice);
-                                query2a.put("customerid", new BasicDBObject("$gte", thisCustomerId));
+                            BasicDBObject query2a = new BasicDBObject();
+                            query2a.put("price", thisPrice);
+                            query2a.put("customerid", new BasicDBObject("$gte", thisCustomerId));
                                 
-                                BasicDBObject query2b = new BasicDBObject();
-                                query2b.put("price", new BasicDBObject("$gt", thisPrice));
+                            BasicDBObject query2b = new BasicDBObject();
+                            query2b.put("price", new BasicDBObject("$gt", thisPrice));
                                 
-                                ArrayList<BasicDBObject> list2 = new ArrayList<BasicDBObject>();
-                                list2.add(query2a);
-                                list2.add(query2b);
+                            ArrayList<BasicDBObject> list2 = new ArrayList<BasicDBObject>();
+                            list2.add(query2a);
+                            list2.add(query2b);
                                 
-                                query.put("$or", list2);
+                            query.put("$or", list2);
+                              
+                            keys.put("price",1);
+                            keys.put("customerid",1);
+                            keys.put("_id",0);
                                 
-                                keys.put("price",1);
-                                keys.put("customerid",1);
-                                keys.put("_id",0);
+                        } else if (whichQuery == 3) {
+                            // query 3
+                            /*
+                           def generate_register_query(row_count, start_time):
+                              customerid = random.randrange(0, FLAGS.customers)
+                              price = ((random.random() * FLAGS.max_price) + customerid) / 100.0
+                              cashregisterid = random.randrange(0, FLAGS.cashregisters)
                                 
-                            } else if (whichQuery == 3) {
-                                // query 3
-                                /*
-                                def generate_register_query(row_count, start_time):
-                                  customerid = random.randrange(0, FLAGS.customers)
-                                  price = ((random.random() * FLAGS.max_price) + customerid) / 100.0
-                                  cashregisterid = random.randrange(0, FLAGS.cashregisters)
-                                
-                                  sql = 'SELECT cashregisterid,price,customerid FROM %s '\
-                                        'FORCE INDEX (registersegment) WHERE '\
-                                        '(cashregisterid=%d and price=%.2f and customerid>=%d) OR '\
-                                        '(cashregisterid=%d and price>%.2f) OR '\
-                                        '(cashregisterid>%d) LIMIT %d' % (
-                                      FLAGS.table_name, cashregisterid, price, customerid,
-                                      cashregisterid, price, cashregisterid, FLAGS.rows_per_query)
-                                  return sql                        
+                              sql = 'SELECT cashregisterid,price,customerid FROM %s '\
+                                    'FORCE INDEX (registersegment) WHERE '\
+                                    '(cashregisterid=%d and price=%.2f and customerid>=%d) OR '\
+                                    '(cashregisterid=%d and price>%.2f) OR '\
+                                    '(cashregisterid>%d) LIMIT %d' % (
+                                  FLAGS.table_name, cashregisterid, price, customerid,
+                                  cashregisterid, price, cashregisterid, FLAGS.rows_per_query)
+                              return sql                        
                                   
     db.purchases_index.find({$or: [ {cashregisterid: <cashregisterid>, price: <price>, customerid: {$gte: <customerid>} },
                                     {cashregisterid: <cashregisterid>, price: {$gt: <price>}},
                                     {cashregisterid: {$gt: <cashregisterid>}} ]}, 
                             {cashregisterid:1, price:1, customerid:1, _id:0}).limit(1000);;
-                                */
+                            */
                                 
-                                BasicDBObject query3a = new BasicDBObject();
-                                query3a.put("cashregisterid", thisCashRegisterId);
-                                query3a.put("price", thisPrice);
-                                query3a.put("customerid", new BasicDBObject("$gte", thisCustomerId));
+                            BasicDBObject query3a = new BasicDBObject();
+                            query3a.put("cashregisterid", thisCashRegisterId);
+                            query3a.put("price", thisPrice);
+                            query3a.put("customerid", new BasicDBObject("$gte", thisCustomerId));
                                 
-                                BasicDBObject query3b = new BasicDBObject();
-                                query3b.put("cashregisterid", thisCashRegisterId);
-                                query3b.put("price", new BasicDBObject("$gt", thisPrice));
+                            BasicDBObject query3b = new BasicDBObject();
+                            query3b.put("cashregisterid", thisCashRegisterId);
+                            query3b.put("price", new BasicDBObject("$gt", thisPrice));
+                              
+                            BasicDBObject query3c = new BasicDBObject();
+                            query3c.put("cashregisterid", new BasicDBObject("$gt", thisCashRegisterId));
                                 
-                                BasicDBObject query3c = new BasicDBObject();
-                                query3c.put("cashregisterid", new BasicDBObject("$gt", thisCashRegisterId));
+                            ArrayList<BasicDBObject> list3 = new ArrayList<BasicDBObject>();
+                            list3.add(query3a);
+                            list3.add(query3b);
+                            list3.add(query3c);
                                 
-                                ArrayList<BasicDBObject> list3 = new ArrayList<BasicDBObject>();
-                                list3.add(query3a);
-                                list3.add(query3b);
-                                list3.add(query3c);
+                            query.put("$or", list3);
                                 
-                                query.put("$or", list3);
+                            keys.put("cashregisterid",1);
+                            keys.put("price",1);
+                            keys.put("customerid",1);
+                            keys.put("_id",0);
                                 
-                                keys.put("cashregisterid",1);
-                                keys.put("price",1);
-                                keys.put("customerid",1);
-                                keys.put("_id",0);
-                                
-                            }
+                        }
                             
-                            //logMe("Executed query %d",whichQuery);
-                            long now = System.currentTimeMillis();
-                            DBCursor cursor = coll.find(query,keys).limit(queryLimit);
-                            try {
-                                while(cursor.hasNext()) {
-                                    //System.out.println(cursor.next());
-                                    cursor.next();
-                                }
-                            } finally {
-                                cursor.close();
+                        //logMe("Executed query %d",whichQuery);
+                        long now = System.currentTimeMillis();
+                        DBCursor cursor = coll.find(query,keys).limit(queryLimit);
+                        try {
+                            while(cursor.hasNext()) {
+                                //System.out.println(cursor.next());
+                                cursor.next();
                             }
-                            long elapsed = System.currentTimeMillis() - now;
+                        } finally {
+                            cursor.close();
+                        }
+                        long elapsed = System.currentTimeMillis() - now;
                     
-                            //logMe("Query thread %d : performing : %s",threadNumber,thisSelect);
+                        //logMe("Query thread %d : performing : %s",threadNumber,thisSelect);
                     
-                            globalQueriesExecuted.incrementAndGet();
-                            globalQueriesTimeMs.addAndGet(elapsed);
-                        } else {
-                            if (outputWaiting)
-                            {
-                                logMe("Query thread %d : waiting for %,d document insert(s) before starting",threadNumber,queryBeginNumDocs);
-                                outputWaiting = false;
-                            }
+                        globalQueriesExecuted.incrementAndGet();
+                        globalQueriesTimeMs.addAndGet(elapsed);
+                     } else {
+                        if (outputWaiting)
+                        {
+                            logMe("Query thread %d : waiting for %,d document insert(s) before starting",threadNumber,queryBeginNumDocs);
+                            outputWaiting = false;
                         }
                     }
                 }
