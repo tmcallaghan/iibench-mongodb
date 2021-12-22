@@ -76,7 +76,7 @@ export PERCENT_COMPRESSIBLE=90
 
 # number of secondary indexes to maintain
 #   valid values : integer >= 0 and <= 3
-export NUM_SECONDARY_INDEXES=1
+export NUM_SECONDARY_INDEXES=2
 
 # the following 4 parameters allow an insert plus query workload benchmark
 
@@ -100,6 +100,9 @@ export QUERY_NUM_DOCS_BEGIN=1000000
 #   valid values : Y/N
 export CREATE_COLLECTION=Y
 
+# number of lines to tail from output
+TAIL_LINES=10
+
 mongoJars="/home/ubuntu/github/iibench-mongodb/mongo-java-driver-3.9.1.jar"
 
 #javac -cp ${mongoJars}:$CLASSPATH:$PWD/src src/jmongoiibench.java -Xlint:deprecation
@@ -116,3 +119,9 @@ java -cp ${mongoJars}:$CLASSPATH:$PWD/src jmongoiibench $DB_NAME $NUM_LOADER_THR
 echo "" | tee -a $LOG_NAME
 T="$(($(date +%s)-T))"
 printf "`date` | iibench duration = %02d:%02d:%02d:%02d\n" "$((T/86400))" "$((T/3600%24))" "$((T/60%60))" "$((T%60))" | tee -a $LOG_NAME
+echo ""
+echo "************************************************************************"
+echo "final $TAIL_LINES interval(s)"
+echo "************************************************************************"
+tail -n $TAIL_LINES $LOG_NAME
+
