@@ -3,8 +3,6 @@ iibench-mongodb
 
 iiBench Benchmark for MongoDB and DocumentDB
 
-Active development at https://github.com/dritter-sap/iibench including support for other data platforms.
-
 
 Requirements
 =====================
