@@ -16,8 +16,6 @@ export CLASSPATH=$PWD/mongo-java-driver-3.9.1.jar:$CLASSPATH
 
 ```
 
-* You can connect a different server or port by editing the run.simple.bash script. 
-
 
 Running the benchmark
 =====================
