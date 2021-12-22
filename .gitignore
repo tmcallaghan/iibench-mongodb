@@ -1,0 +1,13 @@
+*.class
+.classpath
+.project
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+# Specific Files #
+clean.bash
+create-trust-store.bash
+rds-truststore.jks

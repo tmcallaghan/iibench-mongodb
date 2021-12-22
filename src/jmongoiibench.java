@@ -1,6 +1,9 @@
 //import com.mongodb.Mongo;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
+//import com.mongodb.MongoClientSettings;
+import com.mongodb.MongoClientURI;
+import com.mongodb.MongoCredential;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
@@ -71,6 +74,9 @@ public class jmongoiibench {
     public static int percentCompressible;
     public static int numCompressibleCharacters;
     public static int numUncompressibleCharacters;
+    public static String userName;
+    public static String password;
+    public static int maxPoolSize;
 
     public static int randomStringLength = 4*1024*1024;
     public static String randomStringHolder;
@@ -83,9 +89,9 @@ public class jmongoiibench {
     }
 
     public static void main (String[] args) throws Exception {
-        if (args.length != 23) {
+        if (args.length != 26) {
             logMe("*** ERROR : CONFIGURATION ISSUE ***");
-            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection]");
+            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection] [username] [password] [maximum connection pool size]");
             System.exit(1);
         }
         
@@ -112,24 +118,36 @@ public class jmongoiibench {
         numSecondaryIndexes = Integer.valueOf(args[20]);
         percentCompressible = Integer.valueOf(args[21]);
         createCollection = args[22].toLowerCase();
+        userName = args[23];
+        password = args[24];
+        maxPoolSize = Integer.valueOf(args[25]);
         
         maxThreadInsertsPerSecond = (maxInsertsPerSecond / writerThreads);
         
         WriteConcern myWC = new WriteConcern();
-        if (myWriteConcern.toLowerCase().equals("fsync_safe")) {
-            myWC = WriteConcern.FSYNC_SAFE;
+        //if (myWriteConcern.toLowerCase().equals("fsync_safe")) {
+        //    myWC = WriteConcern.FSYNC_SAFE;
+        //}
+        //else if ((myWriteConcern.toLowerCase().equals("none"))) {
+        //    myWC = WriteConcern.NONE;
+        //}
+        //else if ((myWriteConcern.toLowerCase().equals("normal"))) {
+        //    myWC = WriteConcern.NORMAL;
+        //}
+        //else if ((myWriteConcern.toLowerCase().equals("replicas_safe"))) {
+        //    myWC = WriteConcern.REPLICAS_SAFE;
+        //}
+        //else if ((myWriteConcern.toLowerCase().equals("safe"))) {
+        //    myWC = WriteConcern.SAFE;
+        //}
+        if ((myWriteConcern.toLowerCase().equals("w1"))) {
+            myWC = WriteConcern.W1;
         }
-        else if ((myWriteConcern.toLowerCase().equals("none"))) {
-            myWC = WriteConcern.NONE;
+        else if ((myWriteConcern.toLowerCase().equals("acknowledged"))) {
+            myWC = WriteConcern.ACKNOWLEDGED;
         }
-        else if ((myWriteConcern.toLowerCase().equals("normal"))) {
-            myWC = WriteConcern.NORMAL;
-        }
-        else if ((myWriteConcern.toLowerCase().equals("replicas_safe"))) {
-            myWC = WriteConcern.REPLICAS_SAFE;
-        }
-        else if ((myWriteConcern.toLowerCase().equals("safe"))) {
-            myWC = WriteConcern.SAFE;
+        else if ((myWriteConcern.toLowerCase().equals("unacknowledged"))) {
+            myWC = WriteConcern.UNACKNOWLEDGED;
         } 
         else {
             logMe("*** ERROR : WRITE CONCERN ISSUE ***");
@@ -191,11 +209,31 @@ public class jmongoiibench {
         }
         logMe("  write concern = %s",myWriteConcern);
         logMe("  Server:Port = %s:%d",serverName,serverPort);
-        
-        MongoClientOptions clientOptions = new MongoClientOptions.Builder().connectionsPerHost(2048).socketTimeout(60000).writeConcern(myWC).build();
-        ServerAddress srvrAdd = new ServerAddress(serverName,serverPort);
-        MongoClient m = new MongoClient(srvrAdd, clientOptions);
-        
+        logMe("  UserName = %s",userName);
+        logMe("  Max Connection Pool Size = %d",maxPoolSize);
+
+        //MongoCredential credential = MongoCredential.createCredential("<replace-with-username>", "admin", "<replace-with-password>".toCharArray());
+        //MongoClientOptions clientOptions = new MongoClientOptions.Builder().connectionsPerHost(2048).socketTimeout(60000).writeConcern(myWC).build();
+        //MongoClientSettings clientSettings = new MongoClientSettings.Builder().connectionsPerHost(2048).socketTimeout(60000).writeConcern(myWC).credential(credential).build();
+        //ServerAddress srvrAdd = new ServerAddress(serverName,serverPort);
+        //MongoClient m = new MongoClient(srvrAdd, Arrays.asList(credential), clientOptions);
+
+        String template = "mongodb://%s:%s@%s/sample-database?ssl=false&replicaSet=rs0&readpreference=%s&maxPoolSize=%s";
+        //String clusterEndpoint = serverName+"\\:"+String.valueOf(serverPort);
+        //String readPreference = "secondaryPreferred";
+        String readPreference = "primary";
+        String connectionString = String.format(template, userName, password, serverName, readPreference, maxPoolSize);
+        //logMe("  connection string = %s",connectionString);
+
+        String truststore = "./rds-truststore.jks";
+        String truststorePassword = "secret";
+
+        System.setProperty("javax.net.ssl.trustStore", truststore);
+        System.setProperty("javax.net.ssl.trustStorePassword", truststorePassword);
+
+        //MongoClient m = MongoClients.create(connectionString);
+        MongoClient m = new MongoClient(new MongoClientURI(connectionString));
+
         logMe("mongoOptions | " + m.getMongoOptions().toString());
         logMe("mongoWriteConcern | " + m.getWriteConcern().toString());
         
@@ -275,15 +313,15 @@ public class jmongoiibench {
     
             if (numSecondaryIndexes >= 1) {
                 logMe(" *** creating secondary index on price + customerid");
-                coll.ensureIndex(new BasicDBObject("price", 1).append("customerid", 1), idxOptions);
+                coll.createIndex(new BasicDBObject("price", 1).append("customerid", 1), idxOptions);
             }
             if (numSecondaryIndexes >= 2) {
                 logMe(" *** creating secondary index on cashregisterid + price + customerid");
-                coll.ensureIndex(new BasicDBObject("cashregisterid", 1).append("price", 1).append("customerid", 1), idxOptions);
+                coll.createIndex(new BasicDBObject("cashregisterid", 1).append("price", 1).append("customerid", 1), idxOptions);
             }
             if (numSecondaryIndexes >= 3) {
                 logMe(" *** creating secondary index on price + dateandtime + customerid");
-                coll.ensureIndex(new BasicDBObject("price", 1).append("dateandtime", 1).append("customerid", 1), idxOptions);
+                coll.createIndex(new BasicDBObject("price", 1).append("dateandtime", 1).append("customerid", 1), idxOptions);
             }
             // END: create the collection
         }
