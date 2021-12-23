@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/bash
 
 # simple script to run against running MongoDB/TokuMX server localhost:(default port)
 
@@ -76,7 +76,7 @@ export PERCENT_COMPRESSIBLE=90
 
 # number of secondary indexes to maintain
 #   valid values : integer >= 0 and <= 3
-export NUM_SECONDARY_INDEXES=2
+export NUM_SECONDARY_INDEXES=0
 
 # the following 4 parameters allow an insert plus query workload benchmark
 
