@@ -10,4 +10,6 @@
 # Specific Files #
 clean.bash
 create-trust-store.bash
+instance-resize.bash
+instance-status.bash
 rds-truststore.jks
