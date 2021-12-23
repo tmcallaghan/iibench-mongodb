@@ -1,32 +1,20 @@
-//import com.mongodb.Mongo;
 import com.mongodb.MongoClient;
-import com.mongodb.MongoClientOptions;
-//import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoClientURI;
-import com.mongodb.MongoCredential;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
-import com.mongodb.DBCursor;
-import com.mongodb.ServerAddress;
 import com.mongodb.WriteConcern;
 import com.mongodb.CommandResult;
 
-import java.util.Arrays;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.Properties;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.File;
 import java.io.Writer;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class jmongoiibench {
     public static AtomicLong globalInserts = new AtomicLong(0);
@@ -54,7 +42,6 @@ public class jmongoiibench {
     public static String compressionType;
     public static int basementSize;
     public static String logFileName;
-    public static String indexTechnology;
     public static Long numSeconds;
     public static Integer queriesPerInterval;
     public static Integer queryIntervalSeconds;
@@ -212,18 +199,9 @@ public class jmongoiibench {
         logMe("  UserName = %s",userName);
         logMe("  Max Connection Pool Size = %d",maxPoolSize);
 
-        //MongoCredential credential = MongoCredential.createCredential("<replace-with-username>", "admin", "<replace-with-password>".toCharArray());
-        //MongoClientOptions clientOptions = new MongoClientOptions.Builder().connectionsPerHost(2048).socketTimeout(60000).writeConcern(myWC).build();
-        //MongoClientSettings clientSettings = new MongoClientSettings.Builder().connectionsPerHost(2048).socketTimeout(60000).writeConcern(myWC).credential(credential).build();
-        //ServerAddress srvrAdd = new ServerAddress(serverName,serverPort);
-        //MongoClient m = new MongoClient(srvrAdd, Arrays.asList(credential), clientOptions);
-
         String template = "mongodb://%s:%s@%s/sample-database?ssl=false&replicaSet=rs0&readpreference=%s&maxPoolSize=%s";
-        //String clusterEndpoint = serverName+"\\:"+String.valueOf(serverPort);
-        //String readPreference = "secondaryPreferred";
         String readPreference = "primary";
         String connectionString = String.format(template, userName, password, serverName, readPreference, maxPoolSize);
-        //logMe("  connection string = %s",connectionString);
 
         String truststore = "./rds-truststore.jks";
         String truststorePassword = "secret";
@@ -231,7 +209,6 @@ public class jmongoiibench {
         System.setProperty("javax.net.ssl.trustStore", truststore);
         System.setProperty("javax.net.ssl.trustStorePassword", truststorePassword);
 
-        //MongoClient m = MongoClients.create(connectionString);
         MongoClient m = new MongoClient(new MongoClientURI(connectionString));
 
         logMe("mongoOptions | " + m.getMongoOptions().toString());
@@ -242,18 +219,6 @@ public class jmongoiibench {
         // determine server type : MongoDB or DocumentDB
         DBObject checkServerCmd = new BasicDBObject();
         CommandResult commandResult = db.command("buildInfo");
-        
-        indexTechnology = "mongo";
-
-        /*
-        if ((!indexTechnology.toLowerCase().equals("tokumx")) && (!indexTechnology.toLowerCase().equals("mongo"))) {
-            // unknown index technology, abort
-            logMe(" *** Unknown Indexing Technology %s, shutting down",indexTechnology);
-            System.exit(1);
-        }
-        
-        logMe("  index technology = %s",indexTechnology);
-        */
         
         logMe("--------------------------------------------------");
         
@@ -367,8 +332,6 @@ public class jmongoiibench {
             e.printStackTrace();
         }
         
-        // m.dropDatabase("mydb");
-
         m.close();
         
         logMe("Done!");
