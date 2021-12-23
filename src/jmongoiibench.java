@@ -239,19 +239,13 @@ public class jmongoiibench {
         
         DB db = m.getDB(dbName);
         
-        // determine server type : mongo or tokumx
+        // determine server type : MongoDB or DocumentDB
         DBObject checkServerCmd = new BasicDBObject();
         CommandResult commandResult = db.command("buildInfo");
         
-        // check if tokumxVersion exists, otherwise assume mongo
-        if (commandResult.toString().contains("tokumxVersion")) {
-            indexTechnology = "tokumx";
-        }
-        else
-        {
-            indexTechnology = "mongo";
-        }
-        
+        indexTechnology = "mongo";
+
+        /*
         if ((!indexTechnology.toLowerCase().equals("tokumx")) && (!indexTechnology.toLowerCase().equals("mongo"))) {
             // unknown index technology, abort
             logMe(" *** Unknown Indexing Technology %s, shutting down",indexTechnology);
@@ -259,11 +253,7 @@ public class jmongoiibench {
         }
         
         logMe("  index technology = %s",indexTechnology);
-        
-        if (indexTechnology.toLowerCase().equals("tokumx")) {
-            logMe("  + compression type = %s",compressionType);
-            logMe("  + basement node size (bytes) = %d",basementSize);
-        }
+        */
         
         logMe("--------------------------------------------------");
         
@@ -285,31 +275,16 @@ public class jmongoiibench {
         {
             // create the collection
             String collectionName = "purchases_index";
-    
-            if (indexTechnology.toLowerCase().equals("tokumx")) {
-                DBObject cmd = new BasicDBObject();
-                cmd.put("create", collectionName);
-                cmd.put("compression", compressionType);
-                cmd.put("readPageSize", basementSize);
-                CommandResult result = db.command(cmd);
-                //logMe(result.toString());
-            } else if (indexTechnology.toLowerCase().equals("mongo")) {
-                // nothing special to do for a regular mongo collection
-            } else {
-                // unknown index technology, abort
-                logMe(" *** Unknown Indexing Technology %s, shutting down",indexTechnology);
-                System.exit(1);
-            }
-
             DBCollection coll = db.getCollection(collectionName);
+
+            // drop the collection, if it exists
+            if (db.collectionExists(collectionName)) {
+                logMe(" *** dropping collection " + dbName + "." + collectionName);
+                coll.drop();
+            }
     
             BasicDBObject idxOptions = new BasicDBObject();
             idxOptions.put("background",false);
-    
-            if (indexTechnology.toLowerCase().equals("tokumx")) {
-                idxOptions.put("compression",compressionType);
-                idxOptions.put("readPageSize",basementSize);
-            }
     
             if (numSecondaryIndexes >= 1) {
                 logMe(" *** creating secondary index on price + customerid");
