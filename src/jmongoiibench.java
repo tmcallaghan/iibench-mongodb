@@ -64,6 +64,7 @@ public class jmongoiibench {
     public static String userName;
     public static String password;
     public static int maxPoolSize;
+    public static String uriExtra;
 
     public static int randomStringLength = 4*1024*1024;
     public static String randomStringHolder;
@@ -76,9 +77,9 @@ public class jmongoiibench {
     }
 
     public static void main (String[] args) throws Exception {
-        if (args.length != 26) {
+        if (args.length != 27) {
             logMe("*** ERROR : CONFIGURATION ISSUE ***");
-            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection] [username] [password] [maximum connection pool size]");
+            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection] [username] [password] [maximum connection pool size] [extra connection URI string]");
             System.exit(1);
         }
         
@@ -108,6 +109,7 @@ public class jmongoiibench {
         userName = args[23];
         password = args[24];
         maxPoolSize = Integer.valueOf(args[25]);
+        uriExtra = args[26];
         
         maxThreadInsertsPerSecond = (maxInsertsPerSecond / writerThreads);
         
@@ -198,10 +200,21 @@ public class jmongoiibench {
         logMe("  Server:Port = %s:%d",serverName,serverPort);
         logMe("  UserName = %s",userName);
         logMe("  Max Connection Pool Size = %d",maxPoolSize);
+	if (uriExtra.toLowerCase().equals("none"))
+	{
+	    uriExtra = "";
+	    logMe("  No additional URI connection information");
+	}
+	else
+            logMe("  Additional URI connection information = %s",uriExtra);
+	{
 
-        String template = "mongodb://%s:%s@%s/sample-database?ssl=false&replicaSet=rs0&readpreference=%s&maxPoolSize=%s";
+	}
+        logMe("  Max Connection Pool Size = %d",maxPoolSize);
+
+        String template = "mongodb://%s:%s@%s/sample-database?ssl=false&replicaSet=rs0&readpreference=%s&maxPoolSize=%s%s";
         String readPreference = "primary";
-        String connectionString = String.format(template, userName, password, serverName, readPreference, maxPoolSize);
+        String connectionString = String.format(template, userName, password, serverName, readPreference, maxPoolSize, uriExtra);
 
         String truststore = "./rds-truststore.jks";
         String truststorePassword = "secret";
