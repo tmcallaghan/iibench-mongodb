@@ -29,6 +29,7 @@ cd iibench-mongodb
 ```
 
 *[optionally edit run.simple.bash to modify the benchmark behavior]*
+* If using MongoDB, modify URI_EXTRA to pass authSource for authentication database.
 
 ```bash
 ./run.simple.bash
