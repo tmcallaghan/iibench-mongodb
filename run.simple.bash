@@ -43,16 +43,16 @@ export DB_NAME=iibench
 export WRITE_CONCERN=ACKNOWLEDGED
 
 # name of the server to connect to
-export MONGO_SERVER=$DOCDB_HOST
+export MONGO_SERVER=${DOCDB_HOST:?Environment variable not set or empty}
 
 # port of the server to connect to
 export MONGO_PORT=27017
 
 # user
-export MONGO_USERNAME=$DOCDB_USERNAME
+export MONGO_USERNAME=${DOCDB_USERNAME:?Environment variable not set or empty}
 
 # password
-export MONGO_PASSWORD=$DOCDB_PASSWORD
+export MONGO_PASSWORD=${DOCDB_PASSWORD:?Environment variable not set or empty}
 
 # extra URI connection string information
 export URI_EXTRA='NONE'
