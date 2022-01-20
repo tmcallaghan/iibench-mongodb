@@ -16,7 +16,7 @@ export MAX_ROWS=2000000000
 
 # run the benchmark for this many minutes (or the number of inserts defined by MAX_ROWS)
 #   valid values : intever > 0
-export RUN_MINUTES=10
+export RUN_MINUTES=180
 export RUN_SECONDS=$[RUN_MINUTES*60]
 
 # total number of documents to insert per "batch"
@@ -29,7 +29,7 @@ export MAX_INSERTS_PER_SECOND=999999
 
 # total number of simultaneous insertion threads
 #   valid values : integer > 0
-export NUM_LOADER_THREADS=500
+export NUM_LOADER_THREADS=200
 
 # maximum size of connection pool
 export MAX_POOL_SIZE=2000
@@ -69,11 +69,11 @@ export NUM_SECONDS_PER_FEEDBACK=10
 
 # number of additional character fields (semi-compressible) to add to each inserted document
 #   valid values : integer >= 0
-export NUM_CHAR_FIELDS=0
+export NUM_CHAR_FIELDS=10
 
 # size (in bytes) of each additional semi-compressible character field
 #   valid values : integer >= 0
-export LENGTH_CHAR_FIELDS=512
+export LENGTH_CHAR_FIELDS=1024
 
 # percentage of highly compressible data (repeated character "a") in character field
 #   valid values : integer >= 0 and <= 100
@@ -113,7 +113,7 @@ mongoJars="/home/ubuntu/github/iibench-mongodb/mongo-java-driver-3.9.1.jar"
 #javac -cp ${mongoJars}:$CLASSPATH:$PWD/src src/jmongoiibench.java -Xlint:deprecation
 javac --release 11 -cp ${mongoJars}:$CLASSPATH:$PWD/src src/jmongoiibench.java
 
-export LOG_NAME=mongoiibench-${MAX_ROWS}-${NUM_DOCUMENTS_PER_INSERT}-${MAX_INSERTS_PER_SECOND}-${NUM_LOADER_THREADS}-${QUERIES_PER_INTERVAL}-${QUERY_INTERVAL_SECONDS}.txt
+export LOG_NAME=mongoiibench-${MAX_ROWS}-${NUM_DOCUMENTS_PER_INSERT}-${MAX_INSERTS_PER_SECOND}-${NUM_LOADER_THREADS}-${QUERIES_PER_INTERVAL}-${QUERY_INTERVAL_SECONDS}${LOG_NAME_EXTRA}.txt
 export BENCHMARK_TSV=${LOG_NAME}.tsv
     
 rm -f $LOG_NAME
