@@ -113,7 +113,9 @@ mongoJars="/home/ubuntu/github/iibench-mongodb/mongo-java-driver-3.9.1.jar"
 #javac -cp ${mongoJars}:$CLASSPATH:$PWD/src src/jmongoiibench.java -Xlint:deprecation
 javac --release 11 -cp ${mongoJars}:$CLASSPATH:$PWD/src src/jmongoiibench.java
 
-export LOG_NAME=mongoiibench-${MAX_ROWS}-${NUM_DOCUMENTS_PER_INSERT}-${MAX_INSERTS_PER_SECOND}-${NUM_LOADER_THREADS}-${QUERIES_PER_INTERVAL}-${QUERY_INTERVAL_SECONDS}${LOG_NAME_EXTRA}.txt
+YMDHMS=`date +'%Y%m%d-%H%M%S'`
+
+export LOG_NAME=mongoiibench-${YMDHMS}-${MAX_ROWS}-${NUM_DOCUMENTS_PER_INSERT}-${MAX_INSERTS_PER_SECOND}-${NUM_LOADER_THREADS}-${QUERIES_PER_INTERVAL}-${QUERY_INTERVAL_SECONDS}${LOG_NAME_EXTRA}.txt
 export BENCHMARK_TSV=${LOG_NAME}.tsv
     
 rm -f $LOG_NAME
