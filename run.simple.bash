@@ -69,7 +69,7 @@ export NUM_SECONDS_PER_FEEDBACK=10
 
 # number of additional character fields (semi-compressible) to add to each inserted document
 #   valid values : integer >= 0
-export NUM_CHAR_FIELDS=10
+export NUM_CHAR_FIELDS=0
 
 # size (in bytes) of each additional semi-compressible character field
 #   valid values : integer >= 0
