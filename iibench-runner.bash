@@ -11,6 +11,7 @@ instanceClasses="db.r6g.large db.r6g.xlarge db.r6g.2xlarge db.r6g.4xlarge db.r6g
 
 DBINSTANCE='ddb4-max-insert-speed2'
 sleepSeconds=5
+finalSleepSeconds=15
 
 for thisInstanceClass in $instanceClasses; do
     echo "Modifying to instance type ${thisInstanceClass}"
@@ -44,6 +45,9 @@ for thisInstanceClass in $instanceClasses; do
 
     # instance type now set, execute the benchmark
     export LOG_NAME_EXTRA="-${thisInstanceClass}"
+
+    # one more sleep before the benchmark begins
+    sleep $finalSleepSeconds
 
     ./run.simple.bash
 done
