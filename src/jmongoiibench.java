@@ -7,6 +7,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import com.mongodb.WriteConcern;
 import com.mongodb.CommandResult;
+import com.mongodb.BulkWriteOperation;
 
 import java.util.ArrayList;
 import java.io.BufferedWriter;
@@ -15,6 +16,11 @@ import java.io.File;
 import java.io.Writer;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
+
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.util.Date;
+import java.util.TimeZone;
 
 public class jmongoiibench {
     public static AtomicLong globalInserts = new AtomicLong(0);
@@ -35,7 +41,7 @@ public class jmongoiibench {
 
     public static String dbName;
     public static int writerThreads;
-    public static Integer numMaxInserts;
+    public static long numMaxInserts;
     public static int documentsPerInsert;
     public static long insertsPerFeedback;
     public static long secondsPerFeedback;
@@ -65,6 +71,8 @@ public class jmongoiibench {
     public static String password;
     public static int maxPoolSize;
     public static String uriExtra;
+    public static boolean suppressExceptions = false;
+    public static int exceptionPauseMs = 1000;
 
     public static int randomStringLength = 4*1024*1024;
     public static String randomStringHolder;
@@ -77,15 +85,15 @@ public class jmongoiibench {
     }
 
     public static void main (String[] args) throws Exception {
-        if (args.length != 27) {
+        if (args.length != 28) {
             logMe("*** ERROR : CONFIGURATION ISSUE ***");
-            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection] [username] [password] [maximum connection pool size] [extra connection URI string]");
+            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection] [username] [password] [maximum connection pool size] [extra connection URI string] [suppress exceptions (0 or 1)]");
             System.exit(1);
         }
         
         dbName = args[0];
         writerThreads = Integer.valueOf(args[1]);
-        numMaxInserts = Integer.valueOf(args[2]);
+        numMaxInserts = Long.valueOf(args[2]);
         documentsPerInsert = Integer.valueOf(args[3]);
         insertsPerFeedback = Long.valueOf(args[4]);
         secondsPerFeedback = Long.valueOf(args[5]);
@@ -110,6 +118,9 @@ public class jmongoiibench {
         password = args[24];
         maxPoolSize = Integer.valueOf(args[25]);
         uriExtra = args[26];
+        if (Integer.valueOf(args[27]) == 1) {
+	    suppressExceptions = true;
+	};
         
         maxThreadInsertsPerSecond = (maxInsertsPerSecond / writerThreads);
         
@@ -212,15 +223,17 @@ public class jmongoiibench {
 	}
         logMe("  Max Connection Pool Size = %d",maxPoolSize);
 
-        String template = "mongodb://%s:%s@%s/sample-database?ssl=false&replicaSet=rs0&readpreference=%s&maxPoolSize=%s%s";
+        //String template = "mongodb://%s:%s@%s/sample-database?ssl=false&replicaSet=rs0&readpreference=%s&maxPoolSize=%s%s";
+        //String template = "mongodb://%s:%s@%s/sample-database?ssl=true&readpreference=%s&maxPoolSize=%s%s";
+        String template = "mongodb://%s:%s@%s/admin?ssl=false&readpreference=%s&maxPoolSize=%s%s";
         String readPreference = "primary";
         String connectionString = String.format(template, userName, password, serverName, readPreference, maxPoolSize, uriExtra);
 
         String truststore = "./rds-truststore.jks";
         String truststorePassword = "secret";
 
-        System.setProperty("javax.net.ssl.trustStore", truststore);
-        System.setProperty("javax.net.ssl.trustStorePassword", truststorePassword);
+        //System.setProperty("javax.net.ssl.trustStore", truststore);
+        //System.setProperty("javax.net.ssl.trustStorePassword", truststorePassword);
 
         MongoClient m = new MongoClient(new MongoClientURI(connectionString));
 
@@ -353,13 +366,13 @@ public class jmongoiibench {
     class MyWriter implements Runnable {
         int threadCount; 
         int threadNumber; 
-        int numMaxInserts;
+        long numMaxInserts;
         int maxInsertsPerSecond;
         DB db;
         
         java.util.Random rand;
         
-        MyWriter(int threadCount, int threadNumber, int numMaxInserts, DB db, int maxInsertsPerSecond) {
+        MyWriter(int threadCount, int threadNumber, long numMaxInserts, DB db, int maxInsertsPerSecond) {
             this.threadCount = threadCount;
             this.threadNumber = threadNumber;
             this.numMaxInserts = numMaxInserts;
@@ -379,10 +392,10 @@ public class jmongoiibench {
             try {
                 logMe("Writer thread %d : started to load collection %s",threadNumber, collectionName);
 
-                BasicDBObject[] aDocs = new BasicDBObject[documentsPerInsert];
+                //BasicDBObject[] aDocs = new BasicDBObject[documentsPerInsert];
                 
-                int numRounds = numMaxInserts / documentsPerInsert;
-                
+                int numRounds = (int) numMaxInserts / documentsPerInsert;
+               
                 for (int roundNum = 0; roundNum < numRounds; roundNum++) {
                     if ((numInserts - numLastInserts) >= maxInsertsPerSecond) {
                         // pause until a second has passed
@@ -396,6 +409,9 @@ public class jmongoiibench {
                         numLastInserts = numInserts;
                         nextMs = System.currentTimeMillis() + 1000;
                     }
+
+          	    BulkWriteOperation bulk = coll.initializeUnorderedBulkOperation();
+                    //BulkWriteOperation bulk = coll.initializeOrderedBulkOperation();
 
                     for (int i = 0; i < documentsPerInsert; i++) {
                         //id++;
@@ -412,18 +428,28 @@ public class jmongoiibench {
                             int startPosition = rand.nextInt(randomStringLength-lengthCharFields);
                             doc.put("cf"+Integer.toString(charField), randomStringHolder.substring(startPosition,startPosition+numUncompressibleCharacters) + compressibleStringHolder.substring(startPosition,startPosition+numCompressibleCharacters));
                         }
-                        aDocs[i]=doc;
+                        //aDocs[i]=doc;
+			bulk.insert(doc);
                     }
 
                     try {
-                        coll.insert(aDocs);
+                        //coll.insert(aDocs);
+			bulk.execute();
                         numInserts += documentsPerInsert;
                         globalInserts.addAndGet(documentsPerInsert);
                         
                     } catch (Exception e) {
-                        logMe("Writer thread %d : EXCEPTION",threadNumber);
-                        e.printStackTrace();
+			if (!suppressExceptions) {
+                            logMe("Writer thread %d : EXCEPTION",threadNumber);
+                            e.printStackTrace();
+			}
                         globalInsertExceptions.incrementAndGet();
+
+                        try {
+                            Thread.sleep(exceptionPauseMs);
+                        } catch (Exception e1) {
+                            e1.printStackTrace();
+                        }
                     }
                     
                     if (allDone == 1)
@@ -445,12 +471,12 @@ public class jmongoiibench {
     class MyQuery implements Runnable {
         int threadCount; 
         int threadNumber; 
-        int numMaxInserts;
+        long numMaxInserts;
         DB db;
 
         java.util.Random rand;
         
-        MyQuery(int threadCount, int threadNumber, int numMaxInserts, DB db) {
+        MyQuery(int threadCount, int threadNumber, long numMaxInserts, DB db) {
             this.threadCount = threadCount;
             this.threadNumber = threadNumber;
             this.numMaxInserts = numMaxInserts;
@@ -883,6 +909,11 @@ public class jmongoiibench {
 
 
     public static void logMe(String format, Object... args) {
-        System.out.println(Thread.currentThread() + String.format(format, args));
+        Date currentUtcTime = Date.from(Instant.now());
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z");
+        sdf.setTimeZone(TimeZone.getTimeZone("Etc/UTC"));
+        // System.out.println("Current UTC time is " + sdf.format(currentUtcTime));
+
+        System.out.println(Thread.currentThread().toString() + ' ' + sdf.format(currentUtcTime) + " | " + String.format(format, args));
     }
 }
