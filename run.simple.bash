@@ -1,5 +1,41 @@
 #! /bin/bash
 
+
+#export MAX_ROWS=100000000
+#export MAX_ROWS=10000000
+export MAX_ROWS=1000000
+export NUM_DOCUMENTS_PER_INSERT=100
+#export NUM_DOCUMENTS_PER_INSERT=50
+export NUM_LOADER_THREADS=32
+
+# number of secondary indexes to maintain
+#   valid values : integer >= 0 and <= 3
+export NUM_SECONDARY_INDEXES=0
+
+# extra URI connection string information
+#export URI_EXTRA='NONE'
+# MongoDB authentication database
+#export URI_EXTRA='&authSource=admin'
+#export URI_EXTRA='&authSource=admin&tls=false'
+# casc
+export URI_EXTRA='&ssl=true'
+# ddb4-max-insert-speed
+#export URI_EXTRA='&tls=false'
+
+# number of additional character fields (semi-compressible) to add to each inserted document
+#   valid values : integer >= 0
+export NUM_CHAR_FIELDS=10
+
+# size (in bytes) of each additional semi-compressible character field
+#   valid values : integer >= 0
+export LENGTH_CHAR_FIELDS=1024
+
+# database in which to run the benchmark
+#   valid values : character
+#export DB_NAME=iibench
+export DB_NAME=iibench3
+
+
 # simple script to run against running MongoDB/TokuMX server localhost:(default port)
 
 # if running TokuMX, need to select compression for collection and secondary indexes (zlib is default)
@@ -12,16 +48,14 @@ export MONGO_BASEMENT=65536
 
 # run the benchmark for this many inserts (or the number of minutes defined by RUN_MINUTES)
 #   valid values : integer > 0
-export MAX_ROWS=2000000000
 
 # run the benchmark for this many minutes (or the number of inserts defined by MAX_ROWS)
 #   valid values : intever > 0
-export RUN_MINUTES=5
+export RUN_MINUTES=2880
 export RUN_SECONDS=$[RUN_MINUTES*60]
 
 # total number of documents to insert per "batch"
 #   valid values : integer > 0
-export NUM_DOCUMENTS_PER_INSERT=100
 
 # total number of documents to insert per second, allows for the benchmark to be rate limited
 #   valid values : integer > 0
@@ -29,14 +63,10 @@ export MAX_INSERTS_PER_SECOND=999999
 
 # total number of simultaneous insertion threads
 #   valid values : integer > 0
-export NUM_LOADER_THREADS=200
 
 # maximum size of connection pool
-export MAX_POOL_SIZE=2000
+export MAX_POOL_SIZE=4096
 
-# database in which to run the benchmark
-#   valid values : character
-export DB_NAME=iibench
 
 # write concern for the benchmark client
 #   valid values : FSYNC_SAFE, NONE, NORMAL, REPLICAS_SAFE, SAFE, W1, ACKNOWLEDGED, UNACKNOWLEDGED
@@ -54,11 +84,6 @@ export MONGO_USERNAME=${DOCDB_USERNAME:?Environment variable not set or empty}
 # password
 export MONGO_PASSWORD=${DOCDB_PASSWORD:?Environment variable not set or empty}
 
-# extra URI connection string information
-export URI_EXTRA='NONE'
-# MongoDB authentication database
-#export URI_EXTRA='&authSource=admin'
-
 # display performance information every time the client application inserts this many documents
 #   valid values : integer > 0, set to -1 if using NUM_SECONDS_PER_FEEDBACK
 export NUM_INSERTS_PER_FEEDBACK=-1
@@ -67,21 +92,11 @@ export NUM_INSERTS_PER_FEEDBACK=-1
 #   valid values : integer > 0, set to -1 if using NUM_INSERTS_PER_FEEDBACK
 export NUM_SECONDS_PER_FEEDBACK=10
 
-# number of additional character fields (semi-compressible) to add to each inserted document
-#   valid values : integer >= 0
-export NUM_CHAR_FIELDS=0
-
-# size (in bytes) of each additional semi-compressible character field
-#   valid values : integer >= 0
-export LENGTH_CHAR_FIELDS=1024
 
 # percentage of highly compressible data (repeated character "a") in character field
 #   valid values : integer >= 0 and <= 100
-export PERCENT_COMPRESSIBLE=90
+export PERCENT_COMPRESSIBLE=80
 
-# number of secondary indexes to maintain
-#   valid values : integer >= 0 and <= 3
-export NUM_SECONDARY_INDEXES=0
 
 # the following 4 parameters allow an insert plus query workload benchmark
 
@@ -103,12 +118,13 @@ export QUERY_NUM_DOCS_BEGIN=1000000
 
 # create the collection
 #   valid values : Y/N
-export CREATE_COLLECTION=Y
+export CREATE_COLLECTION=N
 
 # number of lines to tail from output
 TAIL_LINES=10
 
-mongoJars="/home/ubuntu/github/iibench-mongodb/mongo-java-driver-3.9.1.jar"
+#mongoJars="/home/ubuntu/github/iibench-mongodb/mongo-java-driver-3.9.1.jar"
+mongoJars="/home/ubuntu/github/iibench-mongodb/mongo-java-driver-3.12.10.jar"
 
 #javac -cp ${mongoJars}:$CLASSPATH:$PWD/src src/jmongoiibench.java -Xlint:deprecation
 javac --release 11 -cp ${mongoJars}:$CLASSPATH:$PWD/src src/jmongoiibench.java
@@ -131,4 +147,6 @@ echo "************************************************************************"
 echo "final $TAIL_LINES interval(s)"
 echo "************************************************************************"
 tail -n $TAIL_LINES $LOG_NAME
+
+cat $LOG_NAME | grep '170 seconds' >> results.txt
 
