@@ -4,8 +4,8 @@ import com.mongodb.DB;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.BasicDBObject;
-import com.mongodb.DBObject;
-import com.mongodb.CommandResult;
+//import com.mongodb.DBObject;
+//import com.mongodb.CommandResult;
 import com.mongodb.BulkWriteOperation;
 
 import java.util.ArrayList;
@@ -165,8 +165,8 @@ public class jmongoiibench {
             logMe("  NO queries, insert only benchmark");
         }
 
-        String truststore = "./rds-truststore.jks";
-        String truststorePassword = "secret";
+        //String truststore = "./rds-truststore.jks";
+        //String truststorePassword = "secret";
 
         //System.setProperty("javax.net.ssl.trustStore", truststore);
         //System.setProperty("javax.net.ssl.trustStorePassword", truststorePassword);
@@ -176,8 +176,7 @@ public class jmongoiibench {
         DB db = m.getDB(dbName);
         
         // determine server type : MongoDB or DocumentDB
-        DBObject checkServerCmd = new BasicDBObject();
-        CommandResult commandResult = db.command("buildInfo");
+        //CommandResult commandResult = db.command("buildInfo");
         
         logMe("--------------------------------------------------");
         
@@ -318,7 +317,7 @@ public class jmongoiibench {
         
             long numInserts = 0;
             long numLastInserts = 0;
-            int id = 0;
+            //int id = 0;
             long nextMs = System.currentTimeMillis() + 1000;
             
             try {
@@ -419,15 +418,15 @@ public class jmongoiibench {
         }
         public void run() {
             long t0 = System.currentTimeMillis();
-            long lastMs = t0;
+            //long lastMs = t0;
             long nextQueryMillis = t0;
             boolean outputWaiting = true;
             boolean outputStarted = true;
             
             DBCollection coll = db.getCollection(collectionName);
         
-            long numQueriesExecuted = 0;
-            long numQueriesTimeMs = 0;
+            //long numQueriesExecuted = 0;
+            //long numQueriesTimeMs = 0;
             
             int whichQuery = 0;
             
@@ -465,7 +464,7 @@ public class jmongoiibench {
                             int thisCustomerId = rand.nextInt(numCustomers);
                             double thisPrice = ((rand.nextDouble() * maxPrice) + (double) thisCustomerId) / 100.0;
                             int thisCashRegisterId = rand.nextInt(numCashRegisters);
-                            int thisProductId = rand.nextInt(numProducts);
+                            //int thisProductId = rand.nextInt(numProducts);
                             long thisRandomTime = t0 + (long) ((double) (thisNow - t0) * rand.nextDouble());
                             
                             BasicDBObject query = new BasicDBObject();
@@ -652,7 +651,7 @@ public class jmongoiibench {
                 e.printStackTrace();
             }
             
-            long numQueries = globalQueryThreads.decrementAndGet();
+            //long numQueries = globalQueryThreads.decrementAndGet();
         }
     }
 
