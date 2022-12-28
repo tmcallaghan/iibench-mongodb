@@ -1,5 +1,22 @@
 #! /bin/bash
 
+# name of the server to connect to
+export MONGO_SERVER=${DOCDB_HOST:?Environment variable not set or empty}
+
+# port of the server to connect to
+export MONGO_PORT=27017
+
+# user
+export MONGO_USERNAME=${DOCDB_USERNAME:?Environment variable not set or empty}
+
+# password
+export MONGO_PASSWORD=${DOCDB_PASSWORD:?Environment variable not set or empty}
+
+# maximum size of connection pool
+export MAX_POOL_SIZE=4096
+
+export MONGO_URI="mongodb://$MONGO_USERNAME:$MONGO_PASSWORD@$MONGO_SERVER/?replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false&maxPoolSize=$MAX_POOL_SIZE"
+
 export MAX_ROWS=100000
 export NUM_DOCUMENTS_PER_INSERT=100
 export NUM_LOADER_THREADS=8
@@ -7,16 +24,6 @@ export NUM_LOADER_THREADS=8
 # number of secondary indexes to maintain
 #   valid values : integer >= 0 and <= 3
 export NUM_SECONDARY_INDEXES=0
-
-# extra URI connection string information
-#export URI_EXTRA='NONE'
-# MongoDB authentication database
-#export URI_EXTRA='&authSource=admin'
-#export URI_EXTRA='&authSource=admin&tls=false'
-# casc
-#export URI_EXTRA='&ssl=true'
-# ddb4
-export URI_EXTRA='&tls=false'
 
 # number of additional character fields (semi-compressible) to add to each inserted document
 #   valid values : integer >= 0
@@ -30,6 +37,7 @@ export LENGTH_CHAR_FIELDS=1024
 #   valid values : character
 #export DB_NAME=iibench
 export DB_NAME=iibench4
+export COLLECTION_NAME=test1
 
 # suppress output from exceptions
 export SUPPRESS_EXCEPTIONS=1
@@ -52,26 +60,6 @@ export MAX_INSERTS_PER_SECOND=999999
 
 # total number of simultaneous insertion threads
 #   valid values : integer > 0
-
-# maximum size of connection pool
-export MAX_POOL_SIZE=4096
-
-
-# write concern for the benchmark client
-#   valid values : FSYNC_SAFE, NONE, NORMAL, REPLICAS_SAFE, SAFE, W1, ACKNOWLEDGED, UNACKNOWLEDGED
-export WRITE_CONCERN=ACKNOWLEDGED
-
-# name of the server to connect to
-export MONGO_SERVER=${DOCDB_HOST:?Environment variable not set or empty}
-
-# port of the server to connect to
-export MONGO_PORT=27017
-
-# user
-export MONGO_USERNAME=${DOCDB_USERNAME:?Environment variable not set or empty}
-
-# password
-export MONGO_PASSWORD=${DOCDB_PASSWORD:?Environment variable not set or empty}
 
 # display performance information every time the client application inserts this many documents
 #   valid values : integer > 0, set to -1 if using NUM_SECONDS_PER_FEEDBACK
@@ -113,7 +101,8 @@ export CREATE_COLLECTION=N
 TAIL_LINES=10
 
 #mongoJars="/home/ubuntu/github/iibench-mongodb/mongo-java-driver-3.9.1.jar"
-mongoJars="/home/ubuntu/github/iibench-mongodb/mongo-java-driver-3.12.10.jar"
+#mongoJars="/home/ubuntu/github/iibench-mongodb/mongo-java-driver-3.12.10.jar"
+mongoJars="/home/ubuntu/github/iibench-mongodb/mongodb-driver-sync-4.8.1.jar:/home/ubuntu/github/iibench-mongodb/bson-4.8.1.jar"
 
 #javac -cp ${mongoJars}:$CLASSPATH:$PWD/src src/jmongoiibench.java -Xlint:deprecation
 javac --release 11 -cp ${mongoJars}:$CLASSPATH:$PWD/src src/jmongoiibench.java
@@ -127,7 +116,7 @@ rm -f $LOG_NAME
 rm -f $BENCHMARK_TSV
 
 T="$(date +%s)"
-java -cp ${mongoJars}:$CLASSPATH:$PWD/src jmongoiibench $DB_NAME $NUM_LOADER_THREADS $MAX_ROWS $NUM_DOCUMENTS_PER_INSERT $NUM_INSERTS_PER_FEEDBACK $NUM_SECONDS_PER_FEEDBACK $BENCHMARK_TSV $RUN_SECONDS $QUERIES_PER_INTERVAL $QUERY_INTERVAL_SECONDS $QUERY_LIMIT $QUERY_NUM_DOCS_BEGIN $MAX_INSERTS_PER_SECOND $WRITE_CONCERN $MONGO_SERVER $MONGO_PORT $NUM_CHAR_FIELDS $LENGTH_CHAR_FIELDS $NUM_SECONDARY_INDEXES $PERCENT_COMPRESSIBLE $CREATE_COLLECTION $MONGO_USERNAME $MONGO_PASSWORD $MAX_POOL_SIZE $URI_EXTRA $SUPPRESS_EXCEPTIONS | tee -a $LOG_NAME
+java -cp ${mongoJars}:$CLASSPATH:$PWD/src jmongoiibench $DB_NAME $COLLECTION_NAME $NUM_LOADER_THREADS $MAX_ROWS $NUM_DOCUMENTS_PER_INSERT $NUM_INSERTS_PER_FEEDBACK $NUM_SECONDS_PER_FEEDBACK $BENCHMARK_TSV $RUN_SECONDS $QUERIES_PER_INTERVAL $QUERY_INTERVAL_SECONDS $QUERY_LIMIT $QUERY_NUM_DOCS_BEGIN $MAX_INSERTS_PER_SECOND $NUM_CHAR_FIELDS $LENGTH_CHAR_FIELDS $NUM_SECONDARY_INDEXES $PERCENT_COMPRESSIBLE $CREATE_COLLECTION $SUPPRESS_EXCEPTIONS $MONGO_URI | tee -a $LOG_NAME
 echo "" | tee -a $LOG_NAME
 T="$(($(date +%s)-T))"
 printf "`date` | iibench duration = %02d:%02d:%02d:%02d\n" "$((T/86400))" "$((T/3600%24))" "$((T/60%60))" "$((T%60))" | tee -a $LOG_NAME
