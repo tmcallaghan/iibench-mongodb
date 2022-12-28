@@ -79,7 +79,10 @@ public class jmongoiibench {
     public static void main (String[] args) throws Exception {
         if (args.length != 21) {
             logMe("*** ERROR : CONFIGURATION ISSUE ***");
-            logMe("jmongoiibench [database name] [collection name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection] [suppress exceptions (0 or 1)] [connection string]");
+            logMe("jmongoiibench [database name] [collection name] [number of writer threads] [documents per collection] [documents per insert] "
+                     +"[inserts feedback] [seconds feedback] [log file name] [number of seconds to run] [queries per interval] [interval (seconds)] "
+                     +"[query limit] [inserts for begin query] [max inserts per second] [num char fields] [length char fields] [num secondary indexes] "
+                     +"[percent compressible] [create collection] [suppress exceptions (0 or 1)] [connection string]");
             System.exit(1);
         }
         
