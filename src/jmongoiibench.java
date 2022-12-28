@@ -318,7 +318,7 @@ public class jmongoiibench {
             rand = new java.util.Random((long) threadNumber);
         }
         public void run() {
-            DBCollection coll = db.getCollection(collectionName);
+            MongoCollection<Document> coll = db.getCollection(collectionName);
         
             long numInserts = 0;
             long numLastInserts = 0;
