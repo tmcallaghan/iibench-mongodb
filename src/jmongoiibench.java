@@ -210,21 +210,20 @@ public class jmongoiibench {
                 coll.drop();
             }
     
-            //BasicDBObject idxOptions = new BasicDBObject();
             Document idxOptions = new Document();
             idxOptions.put("background",false);
     
             if (numSecondaryIndexes >= 1) {
                 logMe(" *** creating secondary index on price + customerid");
-                coll.createIndex(new BasicDBObject("price", 1).append("customerid", 1), idxOptions);
+                coll.createIndex(new Document("price", 1).append("customerid", 1), idxOptions);
             }
             if (numSecondaryIndexes >= 2) {
                 logMe(" *** creating secondary index on cashregisterid + price + customerid");
-                coll.createIndex(new BasicDBObject("cashregisterid", 1).append("price", 1).append("customerid", 1), idxOptions);
+                coll.createIndex(new Document("cashregisterid", 1).append("price", 1).append("customerid", 1), idxOptions);
             }
             if (numSecondaryIndexes >= 3) {
                 logMe(" *** creating secondary index on price + dateandtime + customerid");
-                coll.createIndex(new BasicDBObject("price", 1).append("dateandtime", 1).append("customerid", 1), idxOptions);
+                coll.createIndex(new Document("price", 1).append("dateandtime", 1).append("customerid", 1), idxOptions);
             }
         }
 
@@ -329,7 +328,7 @@ public class jmongoiibench {
             try {
                 logMe("Writer thread %d : started to load collection %s",threadNumber, collectionName);
 
-                //BasicDBObject[] aDocs = new BasicDBObject[documentsPerInsert];
+                //Document[] aDocs = new Document[documentsPerInsert];
                 
                 int numRounds = (int) numMaxInserts / documentsPerInsert;
                
@@ -354,7 +353,7 @@ public class jmongoiibench {
                         //id++;
                         int thisCustomerId = rand.nextInt(numCustomers);
                         double thisPrice= ((rand.nextDouble() * maxPrice) + (double) thisCustomerId) / 100.0;
-                        BasicDBObject doc = new BasicDBObject();
+                        Document doc = new Document();
                         //doc.put("_id",id);
                         doc.put("dateandtime", System.currentTimeMillis());
                         doc.put("cashregisterid", rand.nextInt(numCashRegisters));
@@ -473,8 +472,8 @@ public class jmongoiibench {
                             //int thisProductId = rand.nextInt(numProducts);
                             long thisRandomTime = t0 + (long) ((double) (thisNow - t0) * rand.nextDouble());
                             
-                            BasicDBObject query = new BasicDBObject();
-                            BasicDBObject keys = new BasicDBObject();
+                            Document query = new Document();
+                            Document keys = new Document();
 
                             // query <NOT RUNNING>
                             // *** WE ARE NOT CURRENTLY RUNNING THIS QUERY, THE _id VALUES ARE AUTO-GENERATED ***
@@ -517,19 +516,19 @@ public class jmongoiibench {
                             {price:1, dateandtime:1, customerid:1, _id:0}).limit(1000);
                                 */
                                 
-                                BasicDBObject query1a = new BasicDBObject();
+                                Document query1a = new Document();
                                 query1a.put("price", thisPrice);
                                 query1a.put("dateandtime", thisRandomTime);
-                                query1a.put("customerid", new BasicDBObject("$gte", thisCustomerId));
+                                query1a.put("customerid", new Document("$gte", thisCustomerId));
                                 
-                                BasicDBObject query1b = new BasicDBObject();
+                                Document query1b = new Document();
                                 query1b.put("price", thisPrice);
-                                query1b.put("dateandtime", new BasicDBObject("$gt", thisRandomTime));
+                                query1b.put("dateandtime", new Document("$gt", thisRandomTime));
                                 
-                                BasicDBObject query1c = new BasicDBObject();
-                                query1c.put("price", new BasicDBObject("$gt", thisPrice));
+                                Document query1c = new Document();
+                                query1c.put("price", new Document("$gt", thisPrice));
                                 
-                                ArrayList<BasicDBObject> list1 = new ArrayList<BasicDBObject>();
+                                ArrayList<Document> list1 = new ArrayList<Document>();
                                 list1.add(query1a);
                                 list1.add(query1b);
                                 list1.add(query1c);
@@ -559,14 +558,14 @@ public class jmongoiibench {
                             {price:1, customerid:1, _id:0}).limit(1000);
                                 */
                                 
-                                BasicDBObject query2a = new BasicDBObject();
+                                Document query2a = new Document();
                                 query2a.put("price", thisPrice);
-                                query2a.put("customerid", new BasicDBObject("$gte", thisCustomerId));
+                                query2a.put("customerid", new Document("$gte", thisCustomerId));
                                 
-                                BasicDBObject query2b = new BasicDBObject();
-                                query2b.put("price", new BasicDBObject("$gt", thisPrice));
+                                Document query2b = new Document();
+                                query2b.put("price", new Document("$gt", thisPrice));
                                 
-                                ArrayList<BasicDBObject> list2 = new ArrayList<BasicDBObject>();
+                                ArrayList<Document> list2 = new ArrayList<Document>();
                                 list2.add(query2a);
                                 list2.add(query2b);
                                 
@@ -599,19 +598,19 @@ public class jmongoiibench {
                             {cashregisterid:1, price:1, customerid:1, _id:0}).limit(1000);;
                                 */
                                 
-                                BasicDBObject query3a = new BasicDBObject();
+                                Document query3a = new Document();
                                 query3a.put("cashregisterid", thisCashRegisterId);
                                 query3a.put("price", thisPrice);
-                                query3a.put("customerid", new BasicDBObject("$gte", thisCustomerId));
+                                query3a.put("customerid", new Document("$gte", thisCustomerId));
                                 
-                                BasicDBObject query3b = new BasicDBObject();
+                                Document query3b = new Document();
                                 query3b.put("cashregisterid", thisCashRegisterId);
-                                query3b.put("price", new BasicDBObject("$gt", thisPrice));
+                                query3b.put("price", new Document("$gt", thisPrice));
                                 
-                                BasicDBObject query3c = new BasicDBObject();
-                                query3c.put("cashregisterid", new BasicDBObject("$gt", thisCashRegisterId));
+                                Document query3c = new Document();
+                                query3c.put("cashregisterid", new Document("$gt", thisCashRegisterId));
                                 
-                                ArrayList<BasicDBObject> list3 = new ArrayList<BasicDBObject>();
+                                ArrayList<Document> list3 = new ArrayList<Document>();
                                 list3.add(query3a);
                                 list3.add(query3b);
                                 list3.add(query3c);
