@@ -178,7 +178,7 @@ public class jmongoiibench {
 
         MongoClient m = MongoClients.create(connectionString);
 
-        DB db = m.getDB(dbName);
+        MongoDatabase db = m.getDatabase(dbName);
         
         // determine server type : MongoDB or DocumentDB
         //CommandResult commandResult = db.command("buildInfo");
