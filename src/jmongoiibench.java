@@ -8,6 +8,8 @@ import com.mongodb.BasicDBObject;
 //import com.mongodb.CommandResult;
 import com.mongodb.BulkWriteOperation;
 
+import org.bson.Document;
+
 import java.util.ArrayList;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
