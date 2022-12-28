@@ -4,6 +4,8 @@ import com.mongodb.client.MongoClients;
 //import com.mongodb.DB;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Indexes;
+import com.mongodb.client.model.IndexOptions;
 //import com.mongodb.DBCollection;
 //import com.mongodb.DBCursor;
 //import com.mongodb.BasicDBObject;
@@ -210,20 +212,22 @@ public class jmongoiibench {
                 coll.drop();
             }
     
-            Document idxOptions = new Document();
-            idxOptions.put("background",false);
+            IndexOptions idxOptions = new IndexOptions();
+            //idxOptions.put("background",false);
+            idxOptions.background(false);
     
             if (numSecondaryIndexes >= 1) {
                 logMe(" *** creating secondary index on price + customerid");
-                coll.createIndex(new Document("price", 1).append("customerid", 1), idxOptions);
+                //coll.createIndex(new Document("price", 1).append("customerid", 1), idxOptions);
+                coll.createIndex(Indexes.ascending("price", "customerid"), idxOptions);
             }
             if (numSecondaryIndexes >= 2) {
                 logMe(" *** creating secondary index on cashregisterid + price + customerid");
-                coll.createIndex(new Document("cashregisterid", 1).append("price", 1).append("customerid", 1), idxOptions);
+                coll.createIndex(Indexes.ascending("cashregisterid", "price", "customerid"), idxOptions);
             }
             if (numSecondaryIndexes >= 3) {
                 logMe(" *** creating secondary index on price + dateandtime + customerid");
-                coll.createIndex(new Document("price", 1).append("dateandtime", 1).append("customerid", 1), idxOptions);
+                coll.createIndex(Indexes.ascending("price", "dateandtime", "customerid"), idxOptions);
             }
         }
 
