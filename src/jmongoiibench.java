@@ -8,6 +8,8 @@ import com.mongodb.BasicDBObject;
 //import com.mongodb.CommandResult;
 import com.mongodb.BulkWriteOperation;
 
+import org.bson.Document;
+
 import java.util.ArrayList;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -360,20 +362,20 @@ public class jmongoiibench {
                             doc.put("cf"+Integer.toString(charField), randomStringHolder.substring(startPosition,startPosition+numUncompressibleCharacters) + compressibleStringHolder.substring(startPosition,startPosition+numCompressibleCharacters));
                         }
                         //aDocs[i]=doc;
-			bulk.insert(doc);
+			            bulk.insert(doc);
                     }
 
                     try {
                         //coll.insert(aDocs);
-			bulk.execute();
+			            bulk.execute();
                         numInserts += documentsPerInsert;
                         globalInserts.addAndGet(documentsPerInsert);
                         
                     } catch (Exception e) {
-			if (!suppressExceptions) {
+			            if (!suppressExceptions) {
                             logMe("Writer thread %d : EXCEPTION",threadNumber);
                             e.printStackTrace();
-			}
+			            }
                         globalInsertExceptions.incrementAndGet();
 
                         try {
