@@ -5,7 +5,6 @@ import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
-import com.mongodb.WriteConcern;
 import com.mongodb.CommandResult;
 import com.mongodb.BulkWriteOperation;
 
@@ -55,20 +54,13 @@ public class jmongoiibench {
     public static Integer queryBeginNumDocs;
     public static Integer maxInsertsPerSecond;
     public static Integer maxThreadInsertsPerSecond;
-    public static String myWriteConcern;
-    public static String serverName;
     public static String createCollection;
-    public static int serverPort;
     public static int numCharFields;
     public static int lengthCharFields;
     public static int numSecondaryIndexes;
     public static int percentCompressible;
     public static int numCompressibleCharacters;
     public static int numUncompressibleCharacters;
-    public static String userName;
-    public static String password;
-    public static int maxPoolSize;
-    public static String uriExtra;
     public static boolean suppressExceptions = false;
     public static int exceptionPauseMs = 1000;
 
@@ -84,9 +76,9 @@ public class jmongoiibench {
     }
 
     public static void main (String[] args) throws Exception {
-        if (args.length != 27) {
+        if (args.length != 20) {
             logMe("*** ERROR : CONFIGURATION ISSUE ***");
-            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection] [username] [password] [maximum connection pool size] [extra connection URI string] [suppress exceptions (0 or 1)] [connection string]");
+            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection] [suppress exceptions (0 or 1)] [connection string]");
             System.exit(1);
         }
         
@@ -103,55 +95,17 @@ public class jmongoiibench {
         queryLimit = Integer.valueOf(args[10]);
         queryBeginNumDocs = Integer.valueOf(args[11]);
         maxInsertsPerSecond = Integer.valueOf(args[12]);
-        myWriteConcern = args[13];
-        serverName = args[14];
-        serverPort = Integer.valueOf(args[15]);
-        numCharFields = Integer.valueOf(args[16]);
-        lengthCharFields = Integer.valueOf(args[17]);
-        numSecondaryIndexes = Integer.valueOf(args[18]);
-        percentCompressible = Integer.valueOf(args[19]);
-        createCollection = args[20].toLowerCase();
-        userName = args[21];
-        password = args[22];
-        maxPoolSize = Integer.valueOf(args[23]);
-        uriExtra = args[24];
-        if (Integer.valueOf(args[25]) == 1) {
+        numCharFields = Integer.valueOf(args[13]);
+        lengthCharFields = Integer.valueOf(args[14]);
+        numSecondaryIndexes = Integer.valueOf(args[15]);
+        percentCompressible = Integer.valueOf(args[16]);
+        createCollection = args[17].toLowerCase();
+        if (Integer.valueOf(args[18]) == 1) {
 	        suppressExceptions = true;
 	    };
-        connectionString = args[26];
+        connectionString = args[19];
         
         maxThreadInsertsPerSecond = (maxInsertsPerSecond / writerThreads);
-        
-        WriteConcern myWC = new WriteConcern();
-        //if (myWriteConcern.toLowerCase().equals("fsync_safe")) {
-        //    myWC = WriteConcern.FSYNC_SAFE;
-        //}
-        //else if ((myWriteConcern.toLowerCase().equals("none"))) {
-        //    myWC = WriteConcern.NONE;
-        //}
-        //else if ((myWriteConcern.toLowerCase().equals("normal"))) {
-        //    myWC = WriteConcern.NORMAL;
-        //}
-        //else if ((myWriteConcern.toLowerCase().equals("replicas_safe"))) {
-        //    myWC = WriteConcern.REPLICAS_SAFE;
-        //}
-        //else if ((myWriteConcern.toLowerCase().equals("safe"))) {
-        //    myWC = WriteConcern.SAFE;
-        //}
-        if ((myWriteConcern.toLowerCase().equals("w1"))) {
-            myWC = WriteConcern.W1;
-        }
-        else if ((myWriteConcern.toLowerCase().equals("acknowledged"))) {
-            myWC = WriteConcern.ACKNOWLEDGED;
-        }
-        else if ((myWriteConcern.toLowerCase().equals("unacknowledged"))) {
-            myWC = WriteConcern.UNACKNOWLEDGED;
-        } 
-        else {
-            logMe("*** ERROR : WRITE CONCERN ISSUE ***");
-            logMe("  write concern %s is not supported",myWriteConcern);
-            System.exit(1);
-        }
 
         if ((numSecondaryIndexes < 0) || (numSecondaryIndexes > 3)) {
             logMe("*** ERROR : INVALID NUMBER OF SECONDARY INDEXES, MUST BE >=0 and <= 3 ***");
@@ -205,23 +159,6 @@ public class jmongoiibench {
         {
             logMe("  NO queries, insert only benchmark");
         }
-        logMe("  write concern = %s",myWriteConcern);
-        logMe("  Server:Port = %s:%d",serverName,serverPort);
-        logMe("  UserName = %s",userName);
-        logMe("  Max Connection Pool Size = %d",maxPoolSize);
-        if (uriExtra.toLowerCase().equals("none")) {
-            uriExtra = "";
-            logMe("  No additional URI connection information");
-        } else {
-            logMe("  Additional URI connection information = %s",uriExtra);
-        }
-        logMe("  Max Connection Pool Size = %d",maxPoolSize);
-
-        //String template = "mongodb://%s:%s@%s/sample-database?ssl=false&replicaSet=rs0&readpreference=%s&maxPoolSize=%s%s";
-        //String template = "mongodb://%s:%s@%s/sample-database?ssl=true&readpreference=%s&maxPoolSize=%s%s";
-        //String template = "mongodb://%s:%s@%s/admin?ssl=false&readpreference=%s&maxPoolSize=%s%s";
-        //String readPreference = "primary";
-        //String connectionString = String.format(template, userName, password, serverName, readPreference, maxPoolSize, uriExtra);
 
         String truststore = "./rds-truststore.jks";
         String truststorePassword = "secret";
@@ -231,9 +168,6 @@ public class jmongoiibench {
 
         MongoClient m = new MongoClient(new MongoClientURI(connectionString));
 
-        //logMe("mongoOptions | " + m.getMongoOptions().toString());
-        //logMe("mongoWriteConcern | " + m.getWriteConcern().toString());
-        
         DB db = m.getDB(dbName);
         
         // determine server type : MongoDB or DocumentDB
