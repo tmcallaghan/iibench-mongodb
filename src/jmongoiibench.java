@@ -6,7 +6,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 //import com.mongodb.DBCollection;
 //import com.mongodb.DBCursor;
-import com.mongodb.BasicDBObject;
+//import com.mongodb.BasicDBObject;
 //import com.mongodb.DBObject;
 //import com.mongodb.CommandResult;
 //import com.mongodb.BulkWriteOperation;
@@ -210,7 +210,8 @@ public class jmongoiibench {
                 coll.drop();
             }
     
-            BasicDBObject idxOptions = new BasicDBObject();
+            //BasicDBObject idxOptions = new BasicDBObject();
+            Document idxOptions = new Document();
             idxOptions.put("background",false);
     
             if (numSecondaryIndexes >= 1) {
