@@ -176,7 +176,7 @@ public class jmongoiibench {
         //System.setProperty("javax.net.ssl.trustStore", truststore);
         //System.setProperty("javax.net.ssl.trustStorePassword", truststorePassword);
 
-        MongoClient m = new MongoClient(new MongoClientURI(connectionString));
+        MongoClient m = MongoClients.create(connectionString);
 
         DB db = m.getDB(dbName);
         
