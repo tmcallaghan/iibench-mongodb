@@ -303,12 +303,12 @@ public class jmongoiibench {
         int threadNumber; 
         long numMaxInserts;
         int maxInsertsPerSecond;
-        DB db;
+        MongoDatabase db;
         String collectionName;
         
         java.util.Random rand;
         
-        MyWriter(int threadCount, int threadNumber, long numMaxInserts, DB db, int maxInsertsPerSecond, String collectionName) {
+        MyWriter(int threadCount, int threadNumber, long numMaxInserts, MongoDatabase db, int maxInsertsPerSecond, String collectionName) {
             this.threadCount = threadCount;
             this.threadNumber = threadNumber;
             this.numMaxInserts = numMaxInserts;
@@ -408,12 +408,12 @@ public class jmongoiibench {
         int threadCount; 
         int threadNumber; 
         long numMaxInserts;
-        DB db;
+        MongoDatabase db;
         String collectionName;
 
         java.util.Random rand;
         
-        MyQuery(int threadCount, int threadNumber, long numMaxInserts, DB db, String collectionName) {
+        MyQuery(int threadCount, int threadNumber, long numMaxInserts, MongoDatabase db, String collectionName) {
             this.threadCount = threadCount;
             this.threadNumber = threadNumber;
             this.numMaxInserts = numMaxInserts;
