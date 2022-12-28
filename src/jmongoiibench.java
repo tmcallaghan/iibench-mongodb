@@ -76,6 +76,7 @@ public class jmongoiibench {
     public static String randomStringHolder;
     public static int compressibleStringLength =  4*1024*1024;
     public static String compressibleStringHolder;
+    public static String connectionString;
     
     public static int allDone = 0;
     
@@ -83,9 +84,9 @@ public class jmongoiibench {
     }
 
     public static void main (String[] args) throws Exception {
-        if (args.length != 26) {
+        if (args.length != 27) {
             logMe("*** ERROR : CONFIGURATION ISSUE ***");
-            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection] [username] [password] [maximum connection pool size] [extra connection URI string] [suppress exceptions (0 or 1)]");
+            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [writeconcern] [server] [port] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection] [username] [password] [maximum connection pool size] [extra connection URI string] [suppress exceptions (0 or 1)] [connection string]");
             System.exit(1);
         }
         
@@ -115,8 +116,9 @@ public class jmongoiibench {
         maxPoolSize = Integer.valueOf(args[23]);
         uriExtra = args[24];
         if (Integer.valueOf(args[25]) == 1) {
-	    suppressExceptions = true;
-	};
+	        suppressExceptions = true;
+	    };
+        connectionString = args[26];
         
         maxThreadInsertsPerSecond = (maxInsertsPerSecond / writerThreads);
         
@@ -207,23 +209,19 @@ public class jmongoiibench {
         logMe("  Server:Port = %s:%d",serverName,serverPort);
         logMe("  UserName = %s",userName);
         logMe("  Max Connection Pool Size = %d",maxPoolSize);
-	if (uriExtra.toLowerCase().equals("none"))
-	{
-	    uriExtra = "";
-	    logMe("  No additional URI connection information");
-	}
-	else
+        if (uriExtra.toLowerCase().equals("none")) {
+            uriExtra = "";
+            logMe("  No additional URI connection information");
+        } else {
             logMe("  Additional URI connection information = %s",uriExtra);
-	{
-
-	}
+        }
         logMe("  Max Connection Pool Size = %d",maxPoolSize);
 
         //String template = "mongodb://%s:%s@%s/sample-database?ssl=false&replicaSet=rs0&readpreference=%s&maxPoolSize=%s%s";
         //String template = "mongodb://%s:%s@%s/sample-database?ssl=true&readpreference=%s&maxPoolSize=%s%s";
-        String template = "mongodb://%s:%s@%s/admin?ssl=false&readpreference=%s&maxPoolSize=%s%s";
-        String readPreference = "primary";
-        String connectionString = String.format(template, userName, password, serverName, readPreference, maxPoolSize, uriExtra);
+        //String template = "mongodb://%s:%s@%s/admin?ssl=false&readpreference=%s&maxPoolSize=%s%s";
+        //String readPreference = "primary";
+        //String connectionString = String.format(template, userName, password, serverName, readPreference, maxPoolSize, uriExtra);
 
         String truststore = "./rds-truststore.jks";
         String truststorePassword = "secret";
@@ -233,8 +231,8 @@ public class jmongoiibench {
 
         MongoClient m = new MongoClient(new MongoClientURI(connectionString));
 
-        logMe("mongoOptions | " + m.getMongoOptions().toString());
-        logMe("mongoWriteConcern | " + m.getWriteConcern().toString());
+        //logMe("mongoOptions | " + m.getMongoOptions().toString());
+        //logMe("mongoWriteConcern | " + m.getWriteConcern().toString());
         
         DB db = m.getDB(dbName);
         
