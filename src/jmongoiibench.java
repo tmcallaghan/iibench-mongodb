@@ -39,6 +39,7 @@ public class jmongoiibench {
     public static double maxPrice = 500.0;
 
     public static String dbName;
+    public static String collName;
     public static int writerThreads;
     public static long numMaxInserts;
     public static int documentsPerInsert;
@@ -76,34 +77,35 @@ public class jmongoiibench {
     }
 
     public static void main (String[] args) throws Exception {
-        if (args.length != 20) {
+        if (args.length != 21) {
             logMe("*** ERROR : CONFIGURATION ISSUE ***");
-            logMe("jmongoiibench [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection] [suppress exceptions (0 or 1)] [connection string]");
+            logMe("jmongoiibench [database name] [collection name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [number of seconds to run] [queries per interval] [interval (seconds)] [query limit] [inserts for begin query] [max inserts per second] [num char fields] [length char fields] [num secondary indexes] [percent compressible] [create collection] [suppress exceptions (0 or 1)] [connection string]");
             System.exit(1);
         }
         
         dbName = args[0];
-        writerThreads = Integer.valueOf(args[1]);
-        numMaxInserts = Long.valueOf(args[2]);
-        documentsPerInsert = Integer.valueOf(args[3]);
-        insertsPerFeedback = Long.valueOf(args[4]);
-        secondsPerFeedback = Long.valueOf(args[5]);
-        logFileName = args[6];
-        numSeconds = Long.valueOf(args[7]);
-        queriesPerInterval = Integer.valueOf(args[8]);
-        queryIntervalSeconds = Integer.valueOf(args[9]);
-        queryLimit = Integer.valueOf(args[10]);
-        queryBeginNumDocs = Integer.valueOf(args[11]);
-        maxInsertsPerSecond = Integer.valueOf(args[12]);
-        numCharFields = Integer.valueOf(args[13]);
-        lengthCharFields = Integer.valueOf(args[14]);
-        numSecondaryIndexes = Integer.valueOf(args[15]);
-        percentCompressible = Integer.valueOf(args[16]);
-        createCollection = args[17].toLowerCase();
-        if (Integer.valueOf(args[18]) == 1) {
+        collName = args[1];
+        writerThreads = Integer.valueOf(args[2]);
+        numMaxInserts = Long.valueOf(args[3]);
+        documentsPerInsert = Integer.valueOf(args[4]);
+        insertsPerFeedback = Long.valueOf(args[5]);
+        secondsPerFeedback = Long.valueOf(args[6]);
+        logFileName = args[7];
+        numSeconds = Long.valueOf(args[8]);
+        queriesPerInterval = Integer.valueOf(args[9]);
+        queryIntervalSeconds = Integer.valueOf(args[10]);
+        queryLimit = Integer.valueOf(args[11]);
+        queryBeginNumDocs = Integer.valueOf(args[12]);
+        maxInsertsPerSecond = Integer.valueOf(args[13]);
+        numCharFields = Integer.valueOf(args[14]);
+        lengthCharFields = Integer.valueOf(args[15]);
+        numSecondaryIndexes = Integer.valueOf(args[16]);
+        percentCompressible = Integer.valueOf(args[17]);
+        createCollection = args[18].toLowerCase();
+        if (Integer.valueOf(args[19]) == 1) {
 	        suppressExceptions = true;
 	    };
-        connectionString = args[19];
+        connectionString = args[20];
         
         maxThreadInsertsPerSecond = (maxInsertsPerSecond / writerThreads);
 
@@ -135,7 +137,7 @@ public class jmongoiibench {
 
         logMe("Application Parameters");
         logMe("--------------------------------------------------");
-        logMe("  database name = %s",dbName);
+        logMe("  namespace = %s.%s",dbName,collName);
         logMe("  %d writer thread(s)",writerThreads);
         logMe("  %,d documents per collection",numMaxInserts);
         logMe("  %d character fields",numCharFields);
@@ -193,12 +195,11 @@ public class jmongoiibench {
         else
         {
             // create the collection
-            String collectionName = "purchases_index";
-            DBCollection coll = db.getCollection(collectionName);
+            DBCollection coll = db.getCollection(collName);
 
             // drop the collection, if it exists
-            if (db.collectionExists(collectionName)) {
-                logMe(" *** dropping collection " + dbName + "." + collectionName);
+            if (db.collectionExists(collName)) {
+                logMe(" *** dropping collection " + dbName + "." + collName);
                 coll.drop();
             }
     
@@ -217,7 +218,6 @@ public class jmongoiibench {
                 logMe(" *** creating secondary index on price + dateandtime + customerid");
                 coll.createIndex(new BasicDBObject("price", 1).append("dateandtime", 1).append("customerid", 1), idxOptions);
             }
-            // END: create the collection
         }
 
         java.util.Random rand = new java.util.Random();
@@ -297,19 +297,20 @@ public class jmongoiibench {
         long numMaxInserts;
         int maxInsertsPerSecond;
         DB db;
+        String collectionName;
         
         java.util.Random rand;
         
-        MyWriter(int threadCount, int threadNumber, long numMaxInserts, DB db, int maxInsertsPerSecond) {
+        MyWriter(int threadCount, int threadNumber, long numMaxInserts, DB db, int maxInsertsPerSecond, String collectionName) {
             this.threadCount = threadCount;
             this.threadNumber = threadNumber;
             this.numMaxInserts = numMaxInserts;
             this.maxInsertsPerSecond = maxInsertsPerSecond;
             this.db = db;
+            this.collectionName = collectionName;
             rand = new java.util.Random((long) threadNumber);
         }
         public void run() {
-            String collectionName = "purchases_index";
             DBCollection coll = db.getCollection(collectionName);
         
             long numInserts = 0;
@@ -401,14 +402,16 @@ public class jmongoiibench {
         int threadNumber; 
         long numMaxInserts;
         DB db;
+        String collectionName;
 
         java.util.Random rand;
         
-        MyQuery(int threadCount, int threadNumber, long numMaxInserts, DB db) {
+        MyQuery(int threadCount, int threadNumber, long numMaxInserts, DB db, String collectionName) {
             this.threadCount = threadCount;
             this.threadNumber = threadNumber;
             this.numMaxInserts = numMaxInserts;
             this.db = db;
+            this.collectionName = collectionName;
             rand = new java.util.Random((long) threadNumber);
         }
         public void run() {
@@ -417,8 +420,6 @@ public class jmongoiibench {
             long nextQueryMillis = t0;
             boolean outputWaiting = true;
             boolean outputStarted = true;
-            
-            String collectionName = "purchases_index";
             
             DBCollection coll = db.getCollection(collectionName);
         
