@@ -101,7 +101,8 @@ export CREATE_COLLECTION=N
 TAIL_LINES=10
 
 #mongoJars="/home/ubuntu/github/iibench-mongodb/mongo-java-driver-3.9.1.jar"
-mongoJars="/home/ubuntu/github/iibench-mongodb/mongo-java-driver-3.12.10.jar"
+#mongoJars="/home/ubuntu/github/iibench-mongodb/mongo-java-driver-3.12.10.jar"
+mongoJars="/home/ubuntu/github/iibench-mongodb/mongodb-driver-sync-4.8.1.jar:/home/ubuntu/github/iibench-mongodb/bson-4.8.1.jar"
 
 #javac -cp ${mongoJars}:$CLASSPATH:$PWD/src src/jmongoiibench.java -Xlint:deprecation
 javac --release 11 -cp ${mongoJars}:$CLASSPATH:$PWD/src src/jmongoiibench.java
