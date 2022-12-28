@@ -202,7 +202,7 @@ public class jmongoiibench {
         else
         {
             // create the collection
-            DBCollection coll = db.getCollection(collName);
+            MongoCollection coll = db.getCollection(collName);
 
             // drop the collection, if it exists
             if (db.collectionExists(collName)) {
@@ -428,7 +428,7 @@ public class jmongoiibench {
             boolean outputWaiting = true;
             boolean outputStarted = true;
             
-            DBCollection coll = db.getCollection(collectionName);
+            MongoCollection coll = db.getCollection(collectionName);
         
             //long numQueriesExecuted = 0;
             //long numQueriesTimeMs = 0;
