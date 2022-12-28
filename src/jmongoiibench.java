@@ -244,7 +244,7 @@ public class jmongoiibench {
         Thread reporterThread = new Thread(t.new MyReporter());
         reporterThread.start();
 
-        Thread queryThread = new Thread(t.new MyQuery(1, 1, numMaxInserts, db));
+        Thread queryThread = new Thread(t.new MyQuery(1, 1, numMaxInserts, db, collName));
         if (queriesPerMinute > 0.0) {
             queryThread.start();
         }
@@ -254,7 +254,7 @@ public class jmongoiibench {
         // start the loaders
         for (int i=0; i<writerThreads; i++) {
             globalWriterThreads.incrementAndGet();
-            tWriterThreads[i] = new Thread(t.new MyWriter(writerThreads, i, numMaxInserts, db, maxThreadInsertsPerSecond));
+            tWriterThreads[i] = new Thread(t.new MyWriter(writerThreads, i, numMaxInserts, db, maxThreadInsertsPerSecond, collName));
             tWriterThreads[i].start();
         }
         
