@@ -3,6 +3,7 @@ import com.mongodb.client.MongoClients;
 //import com.mongodb.MongoClientURI;
 //import com.mongodb.DB;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.BulkWriteOptions;
@@ -645,8 +646,8 @@ public class jmongoiibench {
                             //logMe("Executed query %d",whichQuery);
                             long now = System.currentTimeMillis();
                             //tmc
-                            /*
-                            DBCursor cursor = coll.find(query,keys).limit(queryLimit);
+                            //DBCursor cursor = coll.find(query,keys).limit(queryLimit);
+                            MongoCursor<Document> cursor = coll.find(query,keys).limit(queryLimit);
                             try {
                                 while(cursor.hasNext()) {
                                     //System.out.println(cursor.next());
@@ -655,7 +656,6 @@ public class jmongoiibench {
                             } finally {
                                 cursor.close();
                             }
-                            */
                             long elapsed = System.currentTimeMillis() - now;
                     
                             //logMe("Query thread %d : performing : %s",threadNumber,thisSelect);
