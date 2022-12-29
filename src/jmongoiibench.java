@@ -385,7 +385,7 @@ public class jmongoiibench {
                     try {
                         //coll.insert(aDocs);
 			            //bulk.execute();
-                        coll.bulkWrite(aDocs, bwOptions)
+                        coll.bulkWrite(aDocs, bwOptions);
                         numInserts += documentsPerInsert;
                         globalInserts.addAndGet(documentsPerInsert);
                         
