@@ -5,13 +5,14 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Indexes;
+import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.IndexOptions;
 //import com.mongodb.DBCollection;
 //import com.mongodb.DBCursor;
 //import com.mongodb.BasicDBObject;
 //import com.mongodb.DBObject;
 //import com.mongodb.CommandResult;
-import com.mongodb.client.BulkWriteOperation;
+//import com.mongodb.BulkWriteOperation;
 
 import org.bson.Document;
 
@@ -20,6 +21,7 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.File;
 import java.io.Writer;
+import java.nio.file.FileAlreadyExistsException;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -333,11 +335,14 @@ public class jmongoiibench {
             long numLastInserts = 0;
             //int id = 0;
             long nextMs = System.currentTimeMillis() + 1000;
-            
+
             try {
                 logMe("Writer thread %d : started to load collection %s",threadNumber, collectionName);
 
-                //Document[] aDocs = new Document[documentsPerInsert];
+                Document[] aDocs = new Document[documentsPerInsert];
+                //List<WriteModel<Document>> bulkOperations = new ArrayList<>();
+                BulkWriteOptions bwOptions = new BulkWriteOptions();
+                bwOptions.ordered(false);
                 
                 int numRounds = (int) numMaxInserts / documentsPerInsert;
                
@@ -355,7 +360,7 @@ public class jmongoiibench {
                         nextMs = System.currentTimeMillis() + 1000;
                     }
 
-          	    BulkWriteOperation bulk = coll.initializeUnorderedBulkOperation();
+          	        //BulkWriteOperation bulk = coll.initializeUnorderedBulkOperation();
                     //BulkWriteOperation bulk = coll.initializeOrderedBulkOperation();
 
                     for (int i = 0; i < documentsPerInsert; i++) {
@@ -373,13 +378,14 @@ public class jmongoiibench {
                             int startPosition = rand.nextInt(randomStringLength-lengthCharFields);
                             doc.put("cf"+Integer.toString(charField), randomStringHolder.substring(startPosition,startPosition+numUncompressibleCharacters) + compressibleStringHolder.substring(startPosition,startPosition+numCompressibleCharacters));
                         }
-                        //aDocs[i]=doc;
-			            bulk.insert(doc);
+                        aDocs[i]=doc;
+			            //bulk.insert(doc);
                     }
 
                     try {
                         //coll.insert(aDocs);
-			            bulk.execute();
+			            //bulk.execute();
+                        coll.bulkWrite(aDocs, bwOptions)
                         numInserts += documentsPerInsert;
                         globalInserts.addAndGet(documentsPerInsert);
                         
