@@ -204,7 +204,7 @@ public class jmongoiibench {
 
         // test if collection exists
         boolean collectionExists = db.listCollectionNames().into(new ArrayList()).contains(collName);
-        logMe(" ** collection exists = " + collectionExists);
+        //logMe(" ** collection exists = " + collectionExists);
 
         if (createCollection.equals("n"))
         {
@@ -216,15 +216,14 @@ public class jmongoiibench {
             MongoCollection coll = db.getCollection(collName);
 
             // drop the collection, if it exists
-            //tmc
-            //if (db.collectionExists(collName)) {
-            //    logMe(" *** dropping collection " + dbName + "." + collName);
-            //    coll.drop();
-            //}
+            if (collectionExists) {
+                logMe(" *** dropping collection " + dbName + "." + collName);
+                coll.drop();
+            }
     
-            IndexOptions idxOptions = new IndexOptions();
+            IndexOptions idxOptions = new IndexOptions().background(false);
             //idxOptions.put("background",false);
-            idxOptions.background(false);
+            //idxOptions.background(false);
     
             if (numSecondaryIndexes >= 1) {
                 logMe(" *** creating secondary index on price + customerid");
