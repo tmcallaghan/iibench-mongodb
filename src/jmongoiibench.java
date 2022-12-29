@@ -344,8 +344,7 @@ public class jmongoiibench {
 
                 //Document[] aDocs = new Document[documentsPerInsert];
                 List<WriteModel<Document>> bulkOperations = new ArrayList<>();
-                BulkWriteOptions bwOptions = new BulkWriteOptions();
-                bwOptions.ordered(false);
+                BulkWriteOptions bwOptions = new BulkWriteOptions().ordered(false);
                 
                 int numRounds = (int) numMaxInserts / documentsPerInsert;
                
@@ -390,6 +389,7 @@ public class jmongoiibench {
                         //coll.insert(aDocs);
 			            //bulk.execute();
                         coll.bulkWrite(bulkOperations, bwOptions);
+                        bulkOperations.clear();
                         numInserts += documentsPerInsert;
                         globalInserts.addAndGet(documentsPerInsert);
                         
