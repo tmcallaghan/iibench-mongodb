@@ -8,6 +8,7 @@ import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.WriteModel;
+import com.mongodb.client.model.InsertOneModel;
 //import com.mongodb.DBCollection;
 //import com.mongodb.DBCursor;
 //import com.mongodb.BasicDBObject;
@@ -382,7 +383,7 @@ public class jmongoiibench {
                         }
                         //aDocs[i]=doc;
 			            //bulk.insert(doc);
-                        bulkOperations.add(doc);
+                        bulkOperations.add(new InsertOneModel<>(doc));
                     }
 
                     try {
