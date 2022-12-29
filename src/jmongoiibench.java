@@ -5,6 +5,7 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.IndexOptions;
@@ -18,6 +19,7 @@ import com.mongodb.client.model.InsertOneModel;
 //import com.mongodb.BulkWriteOperation;
 
 import org.bson.Document;
+import org.bson.conversions.Bson;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -453,6 +455,10 @@ public class jmongoiibench {
             //long numQueriesTimeMs = 0;
             
             int whichQuery = 0;
+
+            Bson projectionFields = Projections.fields(
+                    Projections.include("cashregisterid", "dateandtime", "customerid", "price"),
+                    Projections.excludeId());
             
             try {
                 logMe("Query thread %d : ready to query collection %s",threadNumber, collectionName);
@@ -645,9 +651,8 @@ public class jmongoiibench {
                             
                             //logMe("Executed query %d",whichQuery);
                             long now = System.currentTimeMillis();
-                            //tmc
                             //DBCursor cursor = coll.find(query,keys).limit(queryLimit);
-                            MongoCursor<Document> cursor = coll.find(query,keys).limit(queryLimit);
+                            MongoCursor<Document> cursor = coll.find(query).projection(projectionFields).limit(queryLimit).iterator();
                             try {
                                 while(cursor.hasNext()) {
                                     //System.out.println(cursor.next());
