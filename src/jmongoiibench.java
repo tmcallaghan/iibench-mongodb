@@ -1,7 +1,5 @@
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
-//import com.mongodb.MongoClientURI;
-//import com.mongodb.DB;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
@@ -11,12 +9,6 @@ import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.WriteModel;
 import com.mongodb.client.model.InsertOneModel;
-//import com.mongodb.DBCollection;
-//import com.mongodb.DBCursor;
-//import com.mongodb.BasicDBObject;
-//import com.mongodb.DBObject;
-//import com.mongodb.CommandResult;
-//import com.mongodb.BulkWriteOperation;
 
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -27,10 +19,8 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.File;
 import java.io.Writer;
-//import java.nio.file.FileAlreadyExistsException;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
-
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.Date;
@@ -190,9 +180,6 @@ public class jmongoiibench {
 
         MongoDatabase db = m.getDatabase(dbName);
         
-        // determine server type : MongoDB or DocumentDB
-        //CommandResult commandResult = db.command("buildInfo");
-        
         logMe("--------------------------------------------------");
         
         if (writerThreads > 1) {
@@ -207,8 +194,7 @@ public class jmongoiibench {
 
         // test if collection exists
         boolean collectionExists = db.listCollectionNames().into(new ArrayList()).contains(collName);
-        //logMe(" ** collection exists = " + collectionExists);
-
+        
         if (createCollection.equals("n"))
         {
             logMe("Skipping collection creation");
@@ -225,12 +211,9 @@ public class jmongoiibench {
             }
     
             IndexOptions idxOptions = new IndexOptions().background(false);
-            //idxOptions.put("background",false);
-            //idxOptions.background(false);
     
             if (numSecondaryIndexes >= 1) {
                 logMe(" *** creating secondary index on price + customerid");
-                //coll.createIndex(new Document("price", 1).append("customerid", 1), idxOptions);
                 coll.createIndex(Indexes.ascending("price", "customerid"), idxOptions);
             }
             if (numSecondaryIndexes >= 2) {
@@ -338,13 +321,11 @@ public class jmongoiibench {
         
             long numInserts = 0;
             long numLastInserts = 0;
-            //int id = 0;
             long nextMs = System.currentTimeMillis() + 1000;
 
             try {
                 logMe("Writer thread %d : started to load collection %s",threadNumber, collectionName);
 
-                //Document[] aDocs = new Document[documentsPerInsert];
                 List<WriteModel<Document>> bulkOperations = new ArrayList<>();
                 BulkWriteOptions bwOptions = new BulkWriteOptions().ordered(false);
                 
@@ -364,15 +345,10 @@ public class jmongoiibench {
                         nextMs = System.currentTimeMillis() + 1000;
                     }
 
-          	        //BulkWriteOperation bulk = coll.initializeUnorderedBulkOperation();
-                    //BulkWriteOperation bulk = coll.initializeOrderedBulkOperation();
-
                     for (int i = 0; i < documentsPerInsert; i++) {
-                        //id++;
                         int thisCustomerId = rand.nextInt(numCustomers);
                         double thisPrice= ((rand.nextDouble() * maxPrice) + (double) thisCustomerId) / 100.0;
                         Document doc = new Document();
-                        //doc.put("_id",id);
                         doc.put("dateandtime", System.currentTimeMillis());
                         doc.put("cashregisterid", rand.nextInt(numCashRegisters));
                         doc.put("customerid", thisCustomerId);
@@ -382,14 +358,10 @@ public class jmongoiibench {
                             int startPosition = rand.nextInt(randomStringLength-lengthCharFields);
                             doc.put("cf"+Integer.toString(charField), randomStringHolder.substring(startPosition,startPosition+numUncompressibleCharacters) + compressibleStringHolder.substring(startPosition,startPosition+numCompressibleCharacters));
                         }
-                        //aDocs[i]=doc;
-			            //bulk.insert(doc);
                         bulkOperations.add(new InsertOneModel<>(doc));
                     }
 
                     try {
-                        //coll.insert(aDocs);
-			            //bulk.execute();
                         coll.bulkWrite(bulkOperations, bwOptions);
                         bulkOperations.clear();
                         numInserts += documentsPerInsert;
@@ -444,15 +416,11 @@ public class jmongoiibench {
         }
         public void run() {
             long t0 = System.currentTimeMillis();
-            //long lastMs = t0;
             long nextQueryMillis = t0;
             boolean outputWaiting = true;
             boolean outputStarted = true;
             
             MongoCollection coll = db.getCollection(collectionName);
-        
-            //long numQueriesExecuted = 0;
-            //long numQueriesTimeMs = 0;
             
             int whichQuery = 0;
 
@@ -464,12 +432,6 @@ public class jmongoiibench {
                 logMe("Query thread %d : ready to query collection %s",threadNumber, collectionName);
 
                 while (allDone == 0) {
-                    //try {
-                    //    Thread.sleep(10);
-                    //} catch (Exception e) {
-                    //    e.printStackTrace();
-                    // }
-                    
                     long thisNow = System.currentTimeMillis();
                     
                     // wait until my next runtime
@@ -494,51 +456,18 @@ public class jmongoiibench {
                             int thisCustomerId = rand.nextInt(numCustomers);
                             double thisPrice = ((rand.nextDouble() * maxPrice) + (double) thisCustomerId) / 100.0;
                             int thisCashRegisterId = rand.nextInt(numCashRegisters);
-                            //int thisProductId = rand.nextInt(numProducts);
                             long thisRandomTime = t0 + (long) ((double) (thisNow - t0) * rand.nextDouble());
                             
                             Document query = new Document();
                             Document keys = new Document();
 
-                            // query <NOT RUNNING>
-                            // *** WE ARE NOT CURRENTLY RUNNING THIS QUERY, THE _id VALUES ARE AUTO-GENERATED ***
-                            /*
-                            def generate_pk_query(row_count, start_time):
-                              if FLAGS.with_max_table_rows and row_count > FLAGS.max_table_rows :
-                                pk_txid = row_count - FLAGS.max_table_rows + random.randrange(FLAGS.max_table_rows)
-                              else:
-                                pk_txid = random.randrange(max(row_count,1))
-                            
-                              sql = 'SELECT transactionid FROM %s WHERE '\
-                                    '(transactionid >= %d) LIMIT %d' % (
-                                  FLAGS.table_name, pk_txid, FLAGS.rows_per_query)
-                              return sql
-                            */
-                            
                             if (whichQuery == 1) {
                                 // query 1
                                 /*
-                                def generate_pdc_query(row_count, start_time):
-                                  customerid = random.randrange(0, FLAGS.customers)
-                                  price = ((random.random() * FLAGS.max_price) + customerid) / 100.0
-                                
-                                  random_time = ((time.time() - start_time) * random.random()) + start_time
-                                  when = random_time + (random.randrange(max(row_count,1)) / 100000.0)
-                                  datetime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(when))
-                                
-                                  sql = 'SELECT price,dateandtime,customerid FROM %s FORCE INDEX (pdc) WHERE '\
-                                        '(price=%.2f and dateandtime="%s" and customerid>=%d) OR '\
-                                        '(price=%.2f and dateandtime>"%s") OR '\
-                                        '(price>%.2f) LIMIT %d' % (FLAGS.table_name, price,
-                                                                   datetime, customerid,
-                                                                   price, datetime, price,
-                                                                   FLAGS.rows_per_query)
-                                  return sql
-                                  
-    db.purchases_index.find({$or: [ {price: <price>, dateandtime: <dateandtime>, customerid: {$gte: <customerid>}},
-                                    {price: <price>, dateandtime: {$gt: <dateandtime>}},
-                                    {price: {$gt: <price>}} ]}, 
-                            {price:1, dateandtime:1, customerid:1, _id:0}).limit(1000);
+                                db.purchases_index.find({$or: [ {price: <price>, dateandtime: <dateandtime>, customerid: {$gte: <customerid>}},
+                                        {price: <price>, dateandtime: {$gt: <dateandtime>}},
+                                        {price: {$gt: <price>}} ]}, 
+                                    {price:1, dateandtime:1, customerid:1, _id:0}).limit(1000);
                                 */
                                 
                                 Document query1a = new Document();
@@ -568,19 +497,9 @@ public class jmongoiibench {
                             } else if (whichQuery == 2) {
                                 // query 2
                                 /*
-                                def generate_market_query(row_count, start_time):
-                                  customerid = random.randrange(0, FLAGS.customers)
-                                  price = ((random.random() * FLAGS.max_price) + customerid) / 100.0
-                                
-                                  sql = 'SELECT price,customerid FROM %s FORCE INDEX (marketsegment) WHERE '\
-                                        '(price=%.2f and customerid>=%d) OR '\
-                                        '(price>%.2f) LIMIT %d' % (
-                                      FLAGS.table_name, price, customerid, price, FLAGS.rows_per_query)
-                                  return sql
-    
-    db.purchases_index.find({$or: [ {price: <price>, customerid: {$gte: <customerid>} },
-                                    {price: {$gt: <price>}} ]}, 
-                            {price:1, customerid:1, _id:0}).limit(1000);
+                                db.purchases_index.find({$or: [ {price: <price>, customerid: {$gte: <customerid>} },
+                                        {price: {$gt: <price>}} ]}, 
+                                    {price:1, customerid:1, _id:0}).limit(1000);
                                 */
                                 
                                 Document query2a = new Document();
@@ -603,24 +522,10 @@ public class jmongoiibench {
                             } else if (whichQuery == 3) {
                                 // query 3
                                 /*
-                                def generate_register_query(row_count, start_time):
-                                  customerid = random.randrange(0, FLAGS.customers)
-                                  price = ((random.random() * FLAGS.max_price) + customerid) / 100.0
-                                  cashregisterid = random.randrange(0, FLAGS.cashregisters)
-                                
-                                  sql = 'SELECT cashregisterid,price,customerid FROM %s '\
-                                        'FORCE INDEX (registersegment) WHERE '\
-                                        '(cashregisterid=%d and price=%.2f and customerid>=%d) OR '\
-                                        '(cashregisterid=%d and price>%.2f) OR '\
-                                        '(cashregisterid>%d) LIMIT %d' % (
-                                      FLAGS.table_name, cashregisterid, price, customerid,
-                                      cashregisterid, price, cashregisterid, FLAGS.rows_per_query)
-                                  return sql                        
-                                  
-    db.purchases_index.find({$or: [ {cashregisterid: <cashregisterid>, price: <price>, customerid: {$gte: <customerid>} },
-                                    {cashregisterid: <cashregisterid>, price: {$gt: <price>}},
-                                    {cashregisterid: {$gt: <cashregisterid>}} ]}, 
-                            {cashregisterid:1, price:1, customerid:1, _id:0}).limit(1000);;
+                                db.purchases_index.find({$or: [ {cashregisterid: <cashregisterid>, price: <price>, customerid: {$gte: <customerid>} },
+                                        {cashregisterid: <cashregisterid>, price: {$gt: <price>}},
+                                        {cashregisterid: {$gt: <cashregisterid>}} ]}, 
+                                    {cashregisterid:1, price:1, customerid:1, _id:0}).limit(1000);;
                                 */
                                 
                                 Document query3a = new Document();
@@ -649,21 +554,16 @@ public class jmongoiibench {
                                 
                             }
                             
-                            //logMe("Executed query %d",whichQuery);
                             long now = System.currentTimeMillis();
-                            //DBCursor cursor = coll.find(query,keys).limit(queryLimit);
                             MongoCursor<Document> cursor = coll.find(query).projection(projectionFields).limit(queryLimit).iterator();
                             try {
                                 while(cursor.hasNext()) {
-                                    //System.out.println(cursor.next());
                                     cursor.next();
                                 }
                             } finally {
                                 cursor.close();
                             }
                             long elapsed = System.currentTimeMillis() - now;
-                    
-                            //logMe("Query thread %d : performing : %s",threadNumber,thisSelect);
                     
                             globalQueriesExecuted.incrementAndGet();
                             globalQueriesTimeMs.addAndGet(elapsed);
@@ -681,8 +581,6 @@ public class jmongoiibench {
                 logMe("Query thread %d : EXCEPTION",threadNumber);
                 e.printStackTrace();
             }
-            
-            //long numQueries = globalQueryThreads.decrementAndGet();
         }
     }
 
