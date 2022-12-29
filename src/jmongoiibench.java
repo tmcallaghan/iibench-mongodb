@@ -7,6 +7,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.WriteModel;
 //import com.mongodb.DBCollection;
 //import com.mongodb.DBCursor;
 //import com.mongodb.BasicDBObject;
@@ -17,6 +18,7 @@ import com.mongodb.client.model.IndexOptions;
 import org.bson.Document;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.File;
@@ -642,6 +644,8 @@ public class jmongoiibench {
                             
                             //logMe("Executed query %d",whichQuery);
                             long now = System.currentTimeMillis();
+                            //tmc
+                            /*
                             DBCursor cursor = coll.find(query,keys).limit(queryLimit);
                             try {
                                 while(cursor.hasNext()) {
@@ -651,6 +655,7 @@ public class jmongoiibench {
                             } finally {
                                 cursor.close();
                             }
+                            */
                             long elapsed = System.currentTimeMillis() - now;
                     
                             //logMe("Query thread %d : performing : %s",threadNumber,thisSelect);
