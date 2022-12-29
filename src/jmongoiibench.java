@@ -11,7 +11,7 @@ import com.mongodb.client.model.IndexOptions;
 //import com.mongodb.BasicDBObject;
 //import com.mongodb.DBObject;
 //import com.mongodb.CommandResult;
-//import com.mongodb.BulkWriteOperation;
+import com.mongodb.client.BulkWriteOperation;
 
 import org.bson.Document;
 
@@ -197,6 +197,10 @@ public class jmongoiibench {
             e.printStackTrace();
         }
 
+        // test if collection exists
+        boolean collectionExists = db.listCollectionNames().into(new ArrayList()).contains(collName);
+        logMe(" ** collection exists = " + collectionExists);
+
         if (createCollection.equals("n"))
         {
             logMe("Skipping collection creation");
@@ -207,10 +211,11 @@ public class jmongoiibench {
             MongoCollection coll = db.getCollection(collName);
 
             // drop the collection, if it exists
-            if (db.collectionExists(collName)) {
-                logMe(" *** dropping collection " + dbName + "." + collName);
-                coll.drop();
-            }
+            //tmc
+            //if (db.collectionExists(collName)) {
+            //    logMe(" *** dropping collection " + dbName + "." + collName);
+            //    coll.drop();
+            //}
     
             IndexOptions idxOptions = new IndexOptions();
             //idxOptions.put("background",false);
