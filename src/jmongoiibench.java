@@ -339,8 +339,8 @@ public class jmongoiibench {
             try {
                 logMe("Writer thread %d : started to load collection %s",threadNumber, collectionName);
 
-                Document[] aDocs = new Document[documentsPerInsert];
-                //List<WriteModel<Document>> bulkOperations = new ArrayList<>();
+                //Document[] aDocs = new Document[documentsPerInsert];
+                List<WriteModel<Document>> bulkOperations = new ArrayList<>();
                 BulkWriteOptions bwOptions = new BulkWriteOptions();
                 bwOptions.ordered(false);
                 
@@ -378,14 +378,15 @@ public class jmongoiibench {
                             int startPosition = rand.nextInt(randomStringLength-lengthCharFields);
                             doc.put("cf"+Integer.toString(charField), randomStringHolder.substring(startPosition,startPosition+numUncompressibleCharacters) + compressibleStringHolder.substring(startPosition,startPosition+numCompressibleCharacters));
                         }
-                        aDocs[i]=doc;
+                        //aDocs[i]=doc;
 			            //bulk.insert(doc);
+                        bulkOperations.add(doc);
                     }
 
                     try {
                         //coll.insert(aDocs);
 			            //bulk.execute();
-                        coll.bulkWrite(aDocs, bwOptions);
+                        coll.bulkWrite(bulkOperations, bwOptions);
                         numInserts += documentsPerInsert;
                         globalInserts.addAndGet(documentsPerInsert);
                         
