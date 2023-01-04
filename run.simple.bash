@@ -15,15 +15,24 @@ export MONGO_PASSWORD=${DOCDB_PASSWORD:?Environment variable not set or empty}
 # maximum size of connection pool
 export MAX_POOL_SIZE=4096
 
+# URI used for connection, customize as needed
 export MONGO_URI="mongodb://$MONGO_USERNAME:$MONGO_PASSWORD@$MONGO_SERVER/?replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false&maxPoolSize=$MAX_POOL_SIZE"
 
-export MAX_ROWS=100000
+# run the benchmark for this many inserts (or the number of minutes defined by RUN_MINUTES)
+#   valid values : integer > 0
+export MAX_ROWS=10000000
+
+# total number of documents to insert per "batch"
+#   valid values : integer > 0
 export NUM_DOCUMENTS_PER_INSERT=100
+
+# total number of simultaneous insertion threads
+#   valid values : integer > 0
 export NUM_LOADER_THREADS=8
 
 # number of secondary indexes to maintain
 #   valid values : integer >= 0 and <= 3
-export NUM_SECONDARY_INDEXES=0
+export NUM_SECONDARY_INDEXES=1
 
 # number of additional character fields (semi-compressible) to add to each inserted document
 #   valid values : integer >= 0
@@ -40,26 +49,16 @@ export DB_NAME=iibench4
 export COLLECTION_NAME=test1
 
 # suppress output from exceptions
-export SUPPRESS_EXCEPTIONS=1
-
-
-# run the benchmark for this many inserts (or the number of minutes defined by RUN_MINUTES)
-#   valid values : integer > 0
+export SUPPRESS_EXCEPTIONS=0
 
 # run the benchmark for this many minutes (or the number of inserts defined by MAX_ROWS)
 #   valid values : intever > 0
 export RUN_MINUTES=2880
 export RUN_SECONDS=$[RUN_MINUTES*60]
 
-# total number of documents to insert per "batch"
-#   valid values : integer > 0
-
 # total number of documents to insert per second, allows for the benchmark to be rate limited
 #   valid values : integer > 0
 export MAX_INSERTS_PER_SECOND=999999
-
-# total number of simultaneous insertion threads
-#   valid values : integer > 0
 
 # display performance information every time the client application inserts this many documents
 #   valid values : integer > 0, set to -1 if using NUM_SECONDS_PER_FEEDBACK
@@ -95,14 +94,12 @@ export QUERY_NUM_DOCS_BEGIN=1000000
 
 # create the collection
 #   valid values : Y/N
-export CREATE_COLLECTION=N
+export CREATE_COLLECTION=Y
 
 # number of lines to tail from output
 TAIL_LINES=10
 
-#mongoJars="/home/ubuntu/github/iibench-mongodb/mongo-java-driver-3.9.1.jar"
-#mongoJars="/home/ubuntu/github/iibench-mongodb/mongo-java-driver-3.12.10.jar"
-mongoJars="/home/ubuntu/github/iibench-mongodb/mongodb-driver-sync-4.8.1.jar:/home/ubuntu/github/iibench-mongodb/bson-4.8.1.jar"
+mongoJars="$PWD/mongodb-driver-sync-4.8.1.jar:$PWD/mongodb-driver-core-4.8.1.jar:$PWD/bson-4.8.1.jar"
 
 #javac -cp ${mongoJars}:$CLASSPATH:$PWD/src src/jmongoiibench.java -Xlint:deprecation
 javac --release 11 -cp ${mongoJars}:$CLASSPATH:$PWD/src src/jmongoiibench.java
